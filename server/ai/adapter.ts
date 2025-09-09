@@ -1,5 +1,4 @@
-import { ChatRequest, ChatResult } from './base'
-import { AIProviderType } from '@/types/ai'
+import { AIProviderType, ChatRequest, ChatResult } from '@/types/ai'
 import { getProvider } from './factory'
 
 export async function runChat(type: AIProviderType, request: ChatRequest): Promise<ChatResult> {

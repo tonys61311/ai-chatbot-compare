@@ -1,6 +1,5 @@
 import { runChat } from '../ai/adapter'
-import type { ChatRequest, ChatResult } from '../ai/base'
-import { AIProviderType, ALL_AI_PROVIDERS } from '@/types/ai'
+import { AIProviderType, ALL_AI_PROVIDERS, ChatRequest, ChatResult } from '@/types/ai'
 import type { H3Event } from 'h3'
 
 interface CompareRequest { prompt: string; providers?: AIProviderType[] }

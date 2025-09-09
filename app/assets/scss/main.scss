@@ -1,6 +1,33 @@
-:root { --maxw: 1100px; }
-* { box-sizing: border-box; }
-body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans TC', sans-serif; }
-.container { max-width: var(--maxw); margin: 0 auto; padding: 24px; }
-button { padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
-textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; }
+:root {
+    --maxw: 100%;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans TC', sans-serif;
+}
+
+.container {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 24px;
+}
+
+button {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: #fff;
+    cursor: pointer;
+}
+
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}

@@ -1,5 +1,5 @@
-import { BaseAIProvider, ChatRequest } from './base'
-import { AIProviderType } from '@/types/ai'
+import { BaseAIProvider } from './base'
+import { AIProviderType, ChatRequest } from '@/types/ai'
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 

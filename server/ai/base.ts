@@ -1,29 +1,11 @@
-import type { AIProviderType } from '@/types/ai'
-
-export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant'
-  content: string
-}
-
-export interface ChatRequest {
-  messages: ChatMessage[]
-  temperature?: number
-  maxTokens?: number
-}
-
-export interface ChatSuccessResult {
-  provider: AIProviderType
-  text: string
-  elapsedMs: number
-}
-
-export interface ChatErrorResult {
-  provider: AIProviderType
-  error: string
-  elapsedMs: number
-}
-
-export type ChatResult = ChatSuccessResult | ChatErrorResult
+import type { 
+  AIProviderType, 
+  ChatMessageAPI, 
+  ChatRequest, 
+  ChatSuccessResult, 
+  ChatErrorResult, 
+  ChatResult 
+} from '@/types/ai'
 
 export abstract class BaseAIProvider {
   public readonly type: AIProviderType

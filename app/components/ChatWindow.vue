@@ -1,32 +1,16 @@
 <script setup lang="ts">
-import { ref, nextTick, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import IconButton from '@/components/IconButton.vue'
 import { AIProviderType } from '@/types/ai'
 
 const props = defineProps<{ type: AIProviderType; title?: string }>()
-
-type Msg = { id: string; role: 'user'|'assistant'; content: string }
-const messages = ref<Msg[]>([])
+const store = useChatStore()
 const input = ref('')
-const loading = ref(false)
-const listEl = ref<HTMLElement | null>(null)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 
-function generateId(): string {
-  return Date.now().toString();
-}
+// 使用滾動 composable
+const { listEl, scrollToBottom, streamToMessage } = useAutoScroll()
 
-function scrollToBottom() {
-  nextTick(() => {
-    const el = listEl.value
-    if (el) {
-      el.scrollTo({
-        top: el.scrollHeight,
-        behavior: 'smooth'
-      })
-    }
-  })
-}
 
 function adjustTextareaHeight() {
   nextTick(() => {
@@ -41,26 +25,20 @@ function adjustTextareaHeight() {
   })
 }
 
+const messages = computed(() => store.getMessages(props.type))
+const loading = computed(() => store.isLoading(props.type))
+
 async function send() {
   const text = input.value.trim()
   if (!text || loading.value) return
   input.value = ''
-  messages.value.push({ id: generateId(), role: 'user', content: text })
-  loading.value = true
+  // 用戶發送訊息時立即滾動到底部
   scrollToBottom()
-  try {
-    const res = await $fetch('/api/compare', {
-      method: 'POST',
-      body: { prompt: text, providers: [props.type] }
-    }) as any
-    const item = (res?.results?.[0])
-    const reply = item?.error ? `錯誤：${item.error}` : (item?.text ?? '')
-    messages.value.push({ id: generateId(), role: 'assistant', content: reply })
-  } catch (e: any) {
-    messages.value.push({ id: generateId(), role: 'assistant', content: `錯誤：${e?.message || 'Unknown error'}` })
-  } finally {
-    loading.value = false
-    scrollToBottom()
+  
+  const result = await store.send(props.type, text)
+  if (result?.message && result?.content) {
+    // 使用串流顯示回應
+    await streamToMessage(result.message, result.content, 20, 'auto')
   }
 }
 
@@ -77,7 +55,7 @@ watch(input, () => {
     </div>
     <div ref="listEl" class="chat__list">
       <div v-for="m in messages" :key="m.id" class="msg" :class="m.role">
-        <div class="bubble">{{ m.content }}</div>
+        <div class="bubble" v-html="m.content"></div>
       </div>
       <div v-if="!messages.length" class="placeholder">輸入訊息開始對話</div>
     </div>
