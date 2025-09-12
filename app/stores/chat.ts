@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { reactive } from 'vue'
-import type { AIProviderType, ChatMessage, CompareResponse } from '@/types/ai'
-import { ofetch } from 'ofetch'
-import { generateId, escapeHtml, transformResponse, tokenizeWordsPreserveSpaces } from '@/utils/helpers'
+import type { AIProviderType, ChatMessage } from '@/types/ai'
+import { generateId, escapeHtml } from '@/utils/helpers'
+import { apiClient } from '@/utils/api'
 
 interface ProviderChatState {
   messages: ChatMessage[]
@@ -47,14 +47,12 @@ export const useChatStore = defineStore('chat', {
       bucket.messages.push(userMsg)
 
       try {
-        const res = await ofetch<CompareResponse>('/api/compare', {
-          method: 'POST',
-          body: { prompt, providers: [provider] }
-        })
+        const res = await apiClient.compareAI(prompt, [provider])
         const item = (res?.results?.[0])
         const isError = item && 'error' in item
         const raw = isError ? `錯誤：${item.error}` : (item?.text ?? '')
-        const html = isError ? escapeHtml(raw) : transformResponse(raw)
+        // 保留原始 markdown（不做 transform），避免破壞縮排或符號
+        const html = isError ? escapeHtml(raw) : raw
 
         const assistantMsg: ChatMessage = reactive({ id: generateId(), role: 'assistant', content: '' }) as ChatMessage
         bucket.messages.push(assistantMsg)

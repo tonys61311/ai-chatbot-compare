@@ -64,24 +64,3 @@ export function escapeHtml(s: string): string {
     .replaceAll(/\"/g, '&quot;')
     .replaceAll(/'/g, '&#39;')
 }
-
-/**
- * 轉換響應文本格式
- * @param text 原始文本
- * @returns 轉換後的 HTML 文本
- */
-export function transformResponse(text: string): string {
-  const responseArray = text.split('**')
-  const newResponse = responseArray.map((e, i) => (i === 0 || i % 2 !== 1) ? e : ('<b>' + e + '</b>')).join('')
-  const newResponse2 = newResponse.split('*').join('<br/>')
-  return newResponse2
-}
-
-/**
- * 保留空格的詞彙分詞
- * @param text 要分詞的文本
- * @returns 分詞後的字符串數組
- */
-export function tokenizeWordsPreserveSpaces(text: string): string[] {
-  return text.split(/(\s+)/).filter(t => t.length > 0)
-}

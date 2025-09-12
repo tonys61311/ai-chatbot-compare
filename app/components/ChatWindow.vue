@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import IconButton from '@/components/IconButton.vue'
+import CodeMarkdown from '@/components/CodeMarkdown.vue'
 import { AIProviderType } from '@/types/ai'
 
 const props = defineProps<{ type: AIProviderType; title?: string }>()
@@ -37,8 +38,8 @@ async function send() {
   
   const result = await store.send(props.type, text)
   if (result?.message && result?.content) {
-    // 使用串流顯示回應
-    await streamToMessage(result.message, result.content, 20, 'auto')
+    // 使用串流顯示回應（word 模式保留空白與縮排）
+    await streamToMessage(result.message, result.content, 20, 'word')
   }
 }
 
@@ -46,6 +47,7 @@ async function send() {
 watch(input, () => {
   adjustTextareaHeight()
 })
+
 </script>
 
 <template>
@@ -55,7 +57,9 @@ watch(input, () => {
     </div>
     <div ref="listEl" class="chat__list">
       <div v-for="m in messages" :key="m.id" class="msg" :class="m.role">
-        <div class="bubble" v-html="m.content"></div>
+        <div class="bubble">
+          <CodeMarkdown :content="m.content" />
+        </div>
       </div>
       <div v-if="!messages.length" class="placeholder">輸入訊息開始對話</div>
     </div>
@@ -161,13 +165,11 @@ watch(input, () => {
 
 .bubble {
   max-width: 80%;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: 12px;
   background: #1a1d24;
   word-wrap: break-word;
-  word-break: break-all;
   overflow-wrap: break-word;
-  white-space: pre-wrap;
 
   .msg.user & {
     background: #1e3a5f;
@@ -218,6 +220,7 @@ watch(input, () => {
   align-items: center;
   gap: 8px;
 }
+
 
 // ===== 按鈕樣式 =====
 /* 使用 IconButton 元件，移除本地按鈕樣式 */

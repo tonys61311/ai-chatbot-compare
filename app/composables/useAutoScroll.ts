@@ -1,6 +1,5 @@
 import { ref, nextTick } from 'vue'
 import type { ChatMessage } from '@/types/ai'
-import { sleep, htmlAwareTokenize } from '@/utils/helpers'
 
 export function useAutoScroll() {
   const listEl = ref<HTMLElement | null>(null)
