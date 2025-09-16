@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { reactive } from 'vue'
-import type { AIProviderType, ChatMessage } from '@/types/ai'
+import type { AIProviderType } from '@/types/ai'
+import type { ChatMessage, ChatResult, ModelChat } from '@/types/api/chat-batch'
 import { generateId, escapeHtml } from '@/utils/helpers'
 import { apiClient } from '@/utils/api'
 
@@ -12,8 +13,6 @@ interface ProviderChatState {
 interface ChatState {
   byProvider: Partial<Record<AIProviderType, ProviderChatState>>
 }
-
-
 
 export const useChatStore = defineStore('chat', {
   state: (): ChatState => ({
@@ -47,22 +46,22 @@ export const useChatStore = defineStore('chat', {
       bucket.messages.push(userMsg)
 
       try {
-        const res = await apiClient.compareAI(prompt, [provider])
-        const item = (res?.results?.[0])
-        const isError = item && 'error' in item
-        const raw = isError ? `錯誤：${item.error}` : (item?.text ?? '')
-        // 保留原始 markdown（不做 transform），避免破壞縮排或符號
+        const chats: ModelChat[] = [
+          { provider, messages: [{ role: 'user', content: prompt }] }
+        ]
+        const results: ChatResult[] = await apiClient.chatBatch(chats)
+        const item = results[0]
+        const isError = !!item && 'error' in item
+        const raw = isError ? `錯誤：${(item as any).error}` : (item?.text || '')
         const html = isError ? escapeHtml(raw) : raw
 
         const assistantMsg: ChatMessage = reactive({ id: generateId(), role: 'assistant', content: '' }) as ChatMessage
         bucket.messages.push(assistantMsg)
-        // 回傳訊息物件，讓 component 處理串流
         return { message: assistantMsg, content: html }
       } catch (e: any) {
         const errText = `錯誤：${e?.message || 'Unknown error'}`
         const errMsg: ChatMessage = reactive({ id: generateId(), role: 'assistant', content: '' }) as ChatMessage
         bucket.messages.push(errMsg)
-        // 回傳錯誤訊息物件，讓 component 處理串流
         return { message: errMsg, content: escapeHtml(errText) }
       } finally {
         bucket.loading = false

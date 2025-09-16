@@ -1,5 +1,6 @@
-import type { AIProviderType, ChatRequest } from '@/types/ai'
-import type { ProviderModel } from '@/types/ai'
+import type { AIProviderType } from '@/types/ai'
+import type { ModelChat } from '@/types/api/chat-batch'
+import type { ProviderModel } from '@/types/api/provider-models'
 import { PROVIDER_MODELS } from './models.config'
 
 export abstract class BaseAIProvider {
@@ -8,7 +9,7 @@ export abstract class BaseAIProvider {
     this.type = type
   }
 
-  abstract chat(request: ChatRequest): Promise<string>
+  abstract chat(request: ModelChat): Promise<string>
   getModels(): ProviderModel[] {
     return PROVIDER_MODELS[this.type] || []
   }

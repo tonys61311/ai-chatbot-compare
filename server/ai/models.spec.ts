@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { AIProviderType } from '@/types/ai'
-import type { ProviderModels } from '@/types/ai'
+import type { ProviderModels } from '@/types/api/provider-models'
 import { getProvider } from './factory'
 
 describe('provider.getModels', () => {

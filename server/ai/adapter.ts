@@ -1,7 +1,8 @@
-import { AIProviderType, ChatRequest, ChatResult } from '@/types/ai'
+import { AIProviderType } from '@/types/ai'
+import type { ModelChat, ChatResult } from '@/types/api/chat-batch'
 import { getProvider } from './factory'
 
-export async function runChat(type: AIProviderType, request: ChatRequest): Promise<ChatResult> {
+export async function runChat(type: AIProviderType, request: ModelChat): Promise<ChatResult> {
   const provider = getProvider(type)
   const start = Date.now()
   try {

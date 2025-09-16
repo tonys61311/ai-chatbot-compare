@@ -1,5 +1,6 @@
 import { BaseAIProvider } from './base'
-import { AIProviderType, ChatRequest } from '@/types/ai'
+import { AIProviderType } from '@/types/ai'
+import type { ModelChat } from '@/types/api/chat-batch'
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
@@ -9,7 +10,7 @@ export class OpenAIProvider extends BaseAIProvider {
     super(AIProviderType.OpenAI)
     this.apiKey = apiKey
   }
-  async chat(request: ChatRequest): Promise<string> {
+  async chat(request: ModelChat): Promise<string> {
     if (!this.apiKey) throw new Error('Missing OpenAI API key')
 
     try {
@@ -25,7 +26,6 @@ export class OpenAIProvider extends BaseAIProvider {
       if (!text) throw new Error('Empty response from OpenAI')
       return text
     } catch (err: any) {
-      // 優先擷取官方 SDK 的錯誤資訊
       const code = err?.code || err?.status || err?.response?.status
       const apiMsg = err?.error?.message || err?.response?.data?.error?.message || err?.message
       const msg = apiMsg || 'OpenAI request failed'
@@ -41,14 +41,13 @@ export class GeminiProvider extends BaseAIProvider {
     super(AIProviderType.Gemini)
     this.apiKey = apiKey
   }
-  async chat(request: ChatRequest): Promise<string> {
+  async chat(request: ModelChat): Promise<string> {
     if (!this.apiKey) throw new Error('Missing Gemini API key')
 
     try {
       const genAI = new GoogleGenerativeAI(this.apiKey)
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
-      // 轉換 messages 格式為 Gemini 格式
       const lastMessage = request.messages[request.messages.length - 1]
       if (!lastMessage) throw new Error('No messages provided')
 
@@ -72,14 +71,13 @@ export class DeepseekProvider extends BaseAIProvider {
     super(AIProviderType.DeepSeek)
     this.apiKey = apiKey
   }
-  async chat(request: ChatRequest): Promise<string> {
+  async chat(request: ModelChat): Promise<string> {
     if (!this.apiKey) throw new Error('Missing DeepSeek API key')
 
     try {
-      // DeepSeek 使用與 OpenAI 相容的 API
       const client = new OpenAI({ 
         apiKey: this.apiKey,
-        baseURL: 'https://api.deepseek.com/v1' // DeepSeek 的 API 端點
+        baseURL: 'https://api.deepseek.com/v1'
       })
       
       const resp = await client.chat.completions.create({
@@ -93,7 +91,6 @@ export class DeepseekProvider extends BaseAIProvider {
       if (!text) throw new Error('Empty response from DeepSeek')
       return text
     } catch (err: any) {
-      // 優先擷取官方 SDK 的錯誤資訊
       const code = err?.code || err?.status || err?.response?.status
       const apiMsg = err?.error?.message || err?.response?.data?.error?.message || err?.message
       const msg = apiMsg || 'DeepSeek request failed'

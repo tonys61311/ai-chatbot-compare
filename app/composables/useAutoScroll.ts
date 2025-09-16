@@ -1,5 +1,5 @@
 import { ref, nextTick } from 'vue'
-import type { ChatMessage } from '@/types/ai'
+import type { ChatMessage } from '@/types/api/chat-batch'
 
 export function useAutoScroll() {
   const listEl = ref<HTMLElement | null>(null)

@@ -1,4 +1,5 @@
-import { AIProviderType, type ProviderModel } from '@/types/ai'
+import { AIProviderType } from '@/types/ai'
+import type { ProviderModel } from '@/types/api/provider-models'
 
 export const PROVIDER_MODELS: Record<AIProviderType, ProviderModel[]> = {
   [AIProviderType.OpenAI]: [

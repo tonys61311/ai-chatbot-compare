@@ -1,6 +1,7 @@
 import { ofetch } from 'ofetch'
-import type { AIProviderType, CompareResponse, ProviderModels } from '@/types/ai'
-import type { ApiDataResponse } from '@/types/api'
+import type { AIProviderType } from '@/types/ai'
+import type { ChatBatchResponse, ModelChat, ChatResult } from '@/types/api/chat-batch'
+import type { ProviderModels } from '@/types/api/provider-models'
 
 interface ApiRequest {
   url: string
@@ -84,11 +85,8 @@ class ApiClient {
     }
   }
 
-  async compareAI(prompt: string, providers: AIProviderType[]): Promise<CompareResponse> {
-    return this.makeRequest<CompareResponse>('/api/compare', 'POST', { 
-      prompt, 
-      providers 
-    })
+  async chatBatch(chats: ModelChat[]): Promise<ChatResult[]> {
+    return this.makeRequest<ChatResult[]>('/api/chat-batch', 'POST', chats)
   }
 
   async getProviderModels(providers: AIProviderType[]): Promise<ProviderModels[]> {
@@ -96,11 +94,6 @@ class ApiClient {
       providers
     })
   }
-
-  // 未來可以擴展更多 API 方法
-  // async getHealth(): Promise<{ status: string }> {
-  //   return this.makeRequest<{ status: string }>('/api/health', 'GET')
-  // }
 }
 
 export const apiClient = new ApiClient()

@@ -162,7 +162,6 @@ watch(input, () => {
 }
 
 
-
 .bubble {
   max-width: 80%;
   padding: 8px 12px;
@@ -220,7 +219,6 @@ watch(input, () => {
   align-items: center;
   gap: 8px;
 }
-
 
 // ===== 按鈕樣式 =====
 /* 使用 IconButton 元件，移除本地按鈕樣式 */

@@ -17,54 +17,62 @@ describe('apiClient', () => {
     vi.clearAllMocks()
   })
 
-  describe('compareAI', () => {
-    it('should make POST request to /api/compare with correct data', async () => {
+  describe('chatBatch', () => {
+    it('should make POST request to /api/chat-batch with correct data', async () => {
       const mockOfetch = await import('ofetch')
-      const mockUnwrapped = {
-        results: [{
+      const mockUnwrapped = [
+        {
           provider: 'openai',
           text: 'Test response',
           elapsedMs: 1000
-        }]
-      }
+        }
+      ]
       const mockWrapped = { data: mockUnwrapped }
       ;(mockOfetch.ofetch as any).mockResolvedValue(mockWrapped)
 
-      const result = await apiClient.compareAI('test prompt', [AIProviderType.OpenAI])
+      const result = await apiClient.chatBatch([
+        { provider: AIProviderType.OpenAI, messages: [{ role: 'user', content: 'test prompt' }] }
+      ])
 
-      expect(mockOfetch.ofetch).toHaveBeenCalledWith('/api/compare', {
+      expect(mockOfetch.ofetch).toHaveBeenCalledWith('/api/chat-batch', {
         method: 'POST',
-        body: { prompt: 'test prompt', providers: [AIProviderType.OpenAI] }
+        body: [
+          { provider: AIProviderType.OpenAI, messages: [{ role: 'user', content: 'test prompt' }] }
+        ]
       })
       expect(result).toEqual(mockUnwrapped)
     })
 
     it('should log request and response data', async () => {
       const mockOfetch = await import('ofetch')
-      const mockUnwrapped = {
-        results: [{
+      const mockUnwrapped = [
+        {
           provider: 'openai',
           text: 'Test response',
           elapsedMs: 1000
-        }]
-      }
+        }
+      ]
       const mockWrapped = { data: mockUnwrapped }
       ;(mockOfetch.ofetch as any).mockResolvedValue(mockWrapped)
 
-      await apiClient.compareAI('test prompt', [AIProviderType.OpenAI])
+      await apiClient.chatBatch([
+        { provider: AIProviderType.OpenAI, messages: [{ role: 'user', content: 'test prompt' }] }
+      ])
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
         '🚀 API Request:',
         expect.objectContaining({
-          url: '/api/compare',
+          url: '/api/chat-batch',
           method: 'POST',
-          body: { prompt: 'test prompt', providers: [AIProviderType.OpenAI] }
+          body: [
+            { provider: AIProviderType.OpenAI, messages: [{ role: 'user', content: 'test prompt' }] }
+          ]
         })
       )
       expect(mockConsoleLog).toHaveBeenCalledWith(
         '✅ API Response:',
         expect.objectContaining({
-          url: '/api/compare',
+          url: '/api/chat-batch',
           data: mockWrapped
         })
       )
@@ -75,12 +83,16 @@ describe('apiClient', () => {
       const mockError = new Error('Network error')
       ;(mockOfetch.ofetch as any).mockRejectedValue(mockError)
 
-      await expect(apiClient.compareAI('test prompt', [AIProviderType.OpenAI])).rejects.toThrow('Network error')
+      await expect(
+        apiClient.chatBatch([
+          { provider: AIProviderType.OpenAI, messages: [{ role: 'user', content: 'test prompt' }] }
+        ])
+      ).rejects.toThrow('Network error')
 
       expect(mockConsoleError).toHaveBeenCalledWith(
         '❌ API Error:',
         expect.objectContaining({
-          url: '/api/compare',
+          url: '/api/chat-batch',
           error: mockError
         })
       )
@@ -88,38 +100,44 @@ describe('apiClient', () => {
 
     it('should handle different provider types', async () => {
       const mockOfetch = await import('ofetch')
-      const mockUnwrapped = {
-        results: [{
+      const mockUnwrapped = [
+        {
           provider: 'gemini',
           text: 'Gemini response',
           elapsedMs: 1500
-        }]
-      }
+        }
+      ]
       const mockWrapped = { data: mockUnwrapped }
       ;(mockOfetch.ofetch as any).mockResolvedValue(mockWrapped)
 
-      const result = await apiClient.compareAI('test prompt', [AIProviderType.Gemini, AIProviderType.DeepSeek])
+      const result = await apiClient.chatBatch([
+        { provider: AIProviderType.Gemini, messages: [{ role: 'user', content: 'test prompt' }] },
+        { provider: AIProviderType.DeepSeek, messages: [{ role: 'user', content: 'test prompt' }] }
+      ])
 
-      expect(mockOfetch.ofetch).toHaveBeenCalledWith('/api/compare', {
+      expect(mockOfetch.ofetch).toHaveBeenCalledWith('/api/chat-batch', {
         method: 'POST',
-        body: { prompt: 'test prompt', providers: [AIProviderType.Gemini, AIProviderType.DeepSeek] }
+        body: [
+          { provider: AIProviderType.Gemini, messages: [{ role: 'user', content: 'test prompt' }] },
+          { provider: AIProviderType.DeepSeek, messages: [{ role: 'user', content: 'test prompt' }] }
+        ]
       })
       expect(result).toEqual(mockUnwrapped)
     })
 
-    it('should handle empty providers array', async () => {
+    it('should handle empty chats array', async () => {
       const mockOfetch = await import('ofetch')
-      const mockUnwrapped = { results: [] }
+      const mockUnwrapped: any[] = []
       const mockWrapped = { data: mockUnwrapped }
       ;(mockOfetch.ofetch as any).mockResolvedValue(mockWrapped)
 
-      const result = await apiClient.compareAI('test prompt', [])
+      const result = await apiClient.chatBatch([])
 
-      expect(mockOfetch.ofetch).toHaveBeenCalledWith('/api/compare', {
+      expect(mockOfetch.ofetch).toHaveBeenCalledWith('/api/chat-batch', {
         method: 'POST',
-        body: { prompt: 'test prompt', providers: [] }
+        body: []
       })
-      expect(result).toEqual(mockUnwrapped)
+      expect(result).toEqual([])
     })
   })
 
