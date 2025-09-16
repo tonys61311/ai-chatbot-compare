@@ -20,14 +20,15 @@ describe('apiClient', () => {
   describe('compareAI', () => {
     it('should make POST request to /api/compare with correct data', async () => {
       const mockOfetch = await import('ofetch')
-      const mockResponse = {
+      const mockUnwrapped = {
         results: [{
           provider: 'openai',
           text: 'Test response',
           elapsedMs: 1000
         }]
       }
-      ;(mockOfetch.ofetch as any).mockResolvedValue(mockResponse)
+      const mockWrapped = { data: mockUnwrapped }
+      ;(mockOfetch.ofetch as any).mockResolvedValue(mockWrapped)
 
       const result = await apiClient.compareAI('test prompt', [AIProviderType.OpenAI])
 
@@ -35,19 +36,20 @@ describe('apiClient', () => {
         method: 'POST',
         body: { prompt: 'test prompt', providers: [AIProviderType.OpenAI] }
       })
-      expect(result).toEqual(mockResponse)
+      expect(result).toEqual(mockUnwrapped)
     })
 
     it('should log request and response data', async () => {
       const mockOfetch = await import('ofetch')
-      const mockResponse = {
+      const mockUnwrapped = {
         results: [{
           provider: 'openai',
           text: 'Test response',
           elapsedMs: 1000
         }]
       }
-      ;(mockOfetch.ofetch as any).mockResolvedValue(mockResponse)
+      const mockWrapped = { data: mockUnwrapped }
+      ;(mockOfetch.ofetch as any).mockResolvedValue(mockWrapped)
 
       await apiClient.compareAI('test prompt', [AIProviderType.OpenAI])
 
@@ -63,7 +65,7 @@ describe('apiClient', () => {
         '✅ API Response:',
         expect.objectContaining({
           url: '/api/compare',
-          data: mockResponse
+          data: mockWrapped
         })
       )
     })
@@ -86,14 +88,15 @@ describe('apiClient', () => {
 
     it('should handle different provider types', async () => {
       const mockOfetch = await import('ofetch')
-      const mockResponse = {
+      const mockUnwrapped = {
         results: [{
           provider: 'gemini',
           text: 'Gemini response',
           elapsedMs: 1500
         }]
       }
-      ;(mockOfetch.ofetch as any).mockResolvedValue(mockResponse)
+      const mockWrapped = { data: mockUnwrapped }
+      ;(mockOfetch.ofetch as any).mockResolvedValue(mockWrapped)
 
       const result = await apiClient.compareAI('test prompt', [AIProviderType.Gemini, AIProviderType.DeepSeek])
 
@@ -101,13 +104,14 @@ describe('apiClient', () => {
         method: 'POST',
         body: { prompt: 'test prompt', providers: [AIProviderType.Gemini, AIProviderType.DeepSeek] }
       })
-      expect(result).toEqual(mockResponse)
+      expect(result).toEqual(mockUnwrapped)
     })
 
     it('should handle empty providers array', async () => {
       const mockOfetch = await import('ofetch')
-      const mockResponse = { results: [] }
-      ;(mockOfetch.ofetch as any).mockResolvedValue(mockResponse)
+      const mockUnwrapped = { results: [] }
+      const mockWrapped = { data: mockUnwrapped }
+      ;(mockOfetch.ofetch as any).mockResolvedValue(mockWrapped)
 
       const result = await apiClient.compareAI('test prompt', [])
 
@@ -115,7 +119,29 @@ describe('apiClient', () => {
         method: 'POST',
         body: { prompt: 'test prompt', providers: [] }
       })
-      expect(result).toEqual(mockResponse)
+      expect(result).toEqual(mockUnwrapped)
+    })
+  })
+
+  describe('getProviderModels', () => {
+    it('should make POST request to /api/provider-models and return unwrapped data', async () => {
+      const mockOfetch = await import('ofetch')
+      const mockUnwrapped = [
+        {
+          type: AIProviderType.OpenAI,
+          models: [{ id: 'gpt-4o-mini', label: 'GPT-4o mini', default: true }]
+        }
+      ]
+      const mockWrapped = { data: mockUnwrapped }
+      ;(mockOfetch.ofetch as any).mockResolvedValue(mockWrapped)
+
+      const result = await apiClient.getProviderModels([AIProviderType.OpenAI])
+
+      expect(mockOfetch.ofetch).toHaveBeenCalledWith('/api/provider-models', {
+        method: 'POST',
+        body: { providers: [AIProviderType.OpenAI] }
+      })
+      expect(result).toEqual(mockUnwrapped)
     })
   })
 })

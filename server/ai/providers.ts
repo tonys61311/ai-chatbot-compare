@@ -32,6 +32,7 @@ export class OpenAIProvider extends BaseAIProvider {
       throw new Error(code ? `${msg} (code: ${code})` : msg)
     }
   }
+  
 }
 
 export class GeminiProvider extends BaseAIProvider {
@@ -62,6 +63,7 @@ export class GeminiProvider extends BaseAIProvider {
       throw new Error(message)
     }
   }
+  
 }
 
 export class DeepseekProvider extends BaseAIProvider {
@@ -98,6 +100,7 @@ export class DeepseekProvider extends BaseAIProvider {
       throw new Error(code ? `${msg} (code: ${code})` : msg)
     }
   }
+  
 }
 
 

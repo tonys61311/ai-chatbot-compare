@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import IconButton from '@/components/IconButton.vue'
+import IconButton from '@/components/common/IconButton.vue'
 import CodeMarkdown from '@/components/CodeMarkdown.vue'
-import { AIProviderType } from '@/types/ai'
+import { BaseAIProviderUI } from '@/providers/ui/base'
 
-const props = defineProps<{ type: AIProviderType; title?: string }>()
+const props = defineProps<{ provider: BaseAIProviderUI }>()
 const store = useChatStore()
 const input = ref('')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
@@ -26,8 +26,8 @@ function adjustTextareaHeight() {
   })
 }
 
-const messages = computed(() => store.getMessages(props.type))
-const loading = computed(() => store.isLoading(props.type))
+const messages = computed(() => store.getMessages(props.provider.type))
+const loading = computed(() => store.isLoading(props.provider.type))
 
 async function send() {
   const text = input.value.trim()
@@ -36,7 +36,7 @@ async function send() {
   // 用戶發送訊息時立即滾動到底部
   scrollToBottom()
   
-  const result = await store.send(props.type, text)
+  const result = await store.send(props.provider.type, text)
   if (result?.message && result?.content) {
     // 使用串流顯示回應（word 模式保留空白與縮排）
     await streamToMessage(result.message, result.content, 20, 'word')
@@ -53,7 +53,7 @@ watch(input, () => {
 <template>
   <div class="chat">
     <div class="chat__header">
-      <div class="chat__title">{{ title || props.type.toUpperCase() }}</div>
+      <div class="chat__title">{{ props.provider.getTitle() }}</div>
     </div>
     <div ref="listEl" class="chat__list">
       <div v-for="m in messages" :key="m.id" class="msg" :class="m.role">

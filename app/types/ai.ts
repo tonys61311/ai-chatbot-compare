@@ -46,3 +46,16 @@ export type ChatResult = ChatSuccessResult | ChatErrorResult
 export interface CompareResponse {
   results: ChatResult[]
 }
+
+// 供模型下拉使用的型別（前後端共用）
+export type ProviderModel = {
+  id: string
+  label: string
+  default?: boolean
+  limits?: { maxTokens?: number }
+}
+
+export type ProviderModels = {
+  type: AIProviderType
+  models: ProviderModel[]
+}

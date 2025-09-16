@@ -1,5 +1,6 @@
 import { ofetch } from 'ofetch'
-import type { AIProviderType, CompareResponse } from '@/types/ai'
+import type { AIProviderType, CompareResponse, ProviderModels } from '@/types/ai'
+import type { ApiDataResponse } from '@/types/api'
 
 interface ApiRequest {
   url: string
@@ -59,7 +60,7 @@ class ApiClient {
     this.logRequest(request)
 
     try {
-      const response = await ofetch<T>(url, {
+      const response = await ofetch<{ data: T } | T>(url, {
         method,
         body,
         ...options
@@ -70,7 +71,10 @@ class ApiClient {
         data: response
       })
 
-      return response
+      if (response && typeof response === 'object' && 'data' in (response as any)) {
+        return (response as any).data as T
+      }
+      return response as T
     } catch (error) {
       this.logError({
         url,
@@ -84,6 +88,12 @@ class ApiClient {
     return this.makeRequest<CompareResponse>('/api/compare', 'POST', { 
       prompt, 
       providers 
+    })
+  }
+
+  async getProviderModels(providers: AIProviderType[]): Promise<ProviderModels[]> {
+    return this.makeRequest<ProviderModels[]>('/api/provider-models', 'POST', {
+      providers
     })
   }
 

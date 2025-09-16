@@ -18,3 +18,11 @@ global.useAutoScroll = vi.fn(() => ({
 
 // Mock ref function
 global.ref = vi.fn((val) => ({ value: val }))
+
+// Mock Nuxt useRuntimeConfig for server-side modules during tests
+global.useRuntimeConfig = vi.fn(() => ({
+  openaiKey: '',
+  geminiKey: '',
+  deepseekKey: '',
+  public: { appName: 'test' }
+}))

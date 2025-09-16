@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/vue'
 import { createPinia, setActivePinia } from 'pinia'
 import ChatWindow from './ChatWindow.vue'
 import { AIProviderType } from '@/types/ai'
+import { OpenAIProviderUI, GeminiProviderUI, DeepseekProviderUI } from '@/providers/ui/providers'
 import '@testing-library/jest-dom'
 
 // Mock the store
@@ -28,31 +29,30 @@ describe('ChatWindow', () => {
     ;(global as any).useAutoScroll = vi.fn(() => mockScrollComposable)
   })
 
-  it('should render with correct title', () => {
+  it('should render with provider title', () => {
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI,
-        title: 'Test Chat'
+        provider: new OpenAIProviderUI()
       }
     })
 
-    expect(screen.getByText('Test Chat')).toBeInTheDocument()
+    expect(screen.getByText('ChatGPT')).toBeInTheDocument()
   })
 
-  it('should render with default title when no title provided', () => {
+  it('should render with correct title from provider object', () => {
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 
-    expect(screen.getByText('OPENAI')).toBeInTheDocument()
+    expect(screen.getByText('ChatGPT')).toBeInTheDocument()
   })
 
   it('should display placeholder when no messages', () => {
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 
@@ -62,7 +62,7 @@ describe('ChatWindow', () => {
   it('should render input field and send button', () => {
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 
@@ -73,7 +73,7 @@ describe('ChatWindow', () => {
   it('should disable send button when input is empty', () => {
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 
@@ -87,7 +87,7 @@ describe('ChatWindow', () => {
     
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 
@@ -105,7 +105,7 @@ describe('ChatWindow', () => {
 
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 
@@ -124,7 +124,7 @@ describe('ChatWindow', () => {
 
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 
@@ -144,7 +144,7 @@ describe('ChatWindow', () => {
 
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 
@@ -161,7 +161,7 @@ describe('ChatWindow', () => {
 
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 
@@ -175,7 +175,7 @@ describe('ChatWindow', () => {
 
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 
@@ -191,7 +191,7 @@ describe('ChatWindow', () => {
     
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 
@@ -206,7 +206,7 @@ describe('ChatWindow', () => {
     
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 
@@ -225,7 +225,7 @@ describe('ChatWindow', () => {
 
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 
@@ -238,17 +238,17 @@ describe('ChatWindow', () => {
     expect(mockStore.send).toHaveBeenCalledWith(AIProviderType.OpenAI, 'Hello')
   })
 
-  it('should display different provider types correctly', () => {
-    const providers = [AIProviderType.OpenAI, AIProviderType.Gemini, AIProviderType.DeepSeek]
+  it('should display different provider titles correctly', () => {
+    const providers = [new OpenAIProviderUI(), new GeminiProviderUI(), new DeepseekProviderUI()]
     
-    providers.forEach(provider => {
+    providers.forEach(p => {
       const { unmount } = render(ChatWindow, {
         props: {
-          type: provider
+          provider: p
         }
       })
 
-      expect(screen.getByText(provider.toUpperCase())).toBeInTheDocument()
+      expect(screen.getByText(p.getTitle())).toBeInTheDocument()
       unmount()
     })
   })
@@ -256,7 +256,7 @@ describe('ChatWindow', () => {
   it('should have proper accessibility attributes', () => {
     render(ChatWindow, {
       props: {
-        type: AIProviderType.OpenAI
+        provider: new OpenAIProviderUI()
       }
     })
 

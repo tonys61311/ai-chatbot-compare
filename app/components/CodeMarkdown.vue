@@ -114,7 +114,7 @@ const sanitizedHtml = computed(() => {
   return DOMPurify.sanitize(renderedHtml.value, {
     USE_PROFILES: { html: true, svg: true },
     ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'strong', 'em', 'del', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'div', 'span', 'button', 'svg', 'path'],
-    ALLOWED_ATTR: ['href', 'title', 'alt', 'src', 'loading', 'class', 'id', 'data-*', 'target', 'rel', 'type', 'width', 'height', 'viewBox', 'fill', 'd'],
+    ADD_ATTR: ['target', 'rel', 'type', 'width', 'height', 'viewBox', 'fill', 'd'],
     FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input'],
     FORBID_ATTR: ['onload', 'onerror', 'onmouseover', 'onclick', 'onchange'],
     ALLOW_DATA_ATTR: true,
@@ -155,11 +155,11 @@ function onRootClick(event: MouseEvent) {
 }
 </script>
 
-<style scoped lang="scss">
+<style lang="scss">
 .markdown-content {
-  // Double lock whitespace for code blocks to avoid external CSS overriding
-  :deep(pre.code-block),
-  :deep(pre.code-block code) {
+  /* Double lock whitespace for code blocks to avoid external CSS overriding */
+  pre.code-block,
+  pre.code-block code {
     white-space: pre !important;
     overflow-x: auto;
     word-break: normal;
@@ -173,8 +173,8 @@ function onRootClick(event: MouseEvent) {
   margin: 0;
   padding: 0;
   
-  // Headers
-  :deep(h1) {
+  /* Headers */
+  h1 {
     font-size: 2rem;
     font-weight: 700;
     margin: 2rem 0 1rem 0;
@@ -184,7 +184,7 @@ function onRootClick(event: MouseEvent) {
     line-height: 1.2;
   }
   
-  :deep(h2) {
+  h2 {
     font-size: 1.5rem;
     font-weight: 600;
     margin: 1.5rem 0 0.75rem 0;
@@ -192,7 +192,7 @@ function onRootClick(event: MouseEvent) {
     line-height: 1.3;
   }
   
-  :deep(h3) {
+  h3 {
     font-size: 1.25rem;
     font-weight: 600;
     margin: 1.25rem 0 0.5rem 0;
@@ -200,29 +200,29 @@ function onRootClick(event: MouseEvent) {
     line-height: 1.4;
   }
   
-  :deep(h4) {
+  h4 {
     font-size: 1.1rem;
     font-weight: 600;
     margin: 1rem 0 0.5rem 0;
     color: #f0f0f0;
   }
   
-  :deep(h5) {
+  h5 {
     font-size: 1rem;
     font-weight: 600;
     margin: 0.75rem 0 0.25rem 0;
     color: #f0f0f0;
   }
   
-  :deep(h6) {
+  h6 {
     font-size: 0.9rem;
     font-weight: 600;
     margin: 0.5rem 0 0.25rem 0;
     color: #f0f0f0;
   }
   
-  // Paragraphs
-  :deep(p) {
+  /* Paragraphs */
+  p {
     margin: 0.125rem 0;
     line-height: 1.5;
     
@@ -235,8 +235,8 @@ function onRootClick(event: MouseEvent) {
     }
   }
   
-  // Links
-  :deep(a) {
+  /* Links */
+  a {
     color: #60a5fa;
     text-decoration: underline;
     transition: color 0.2s ease;
@@ -250,8 +250,8 @@ function onRootClick(event: MouseEvent) {
     }
   }
   
-  // Lists
-  :deep(ul), :deep(ol) {
+  /* Lists */
+  ul, ol {
     margin: 0.25rem 0;
     padding-left: 1.25rem;
     
@@ -260,7 +260,7 @@ function onRootClick(event: MouseEvent) {
     }
   }
   
-  :deep(ul) {
+  ul {
     list-style-type: disc;
     
     ul {
@@ -273,7 +273,7 @@ function onRootClick(event: MouseEvent) {
     }
   }
   
-  :deep(ol) {
+  ol {
     list-style-type: decimal;
     
     ol {
@@ -286,8 +286,8 @@ function onRootClick(event: MouseEvent) {
     }
   }
   
-  // Task lists
-  :deep(ul.contains-task-list) {
+  /* Task lists */
+  ul.contains-task-list {
     list-style: none;
     padding-left: 0;
     
@@ -303,24 +303,24 @@ function onRootClick(event: MouseEvent) {
     }
   }
   
-  // Text formatting
-  :deep(strong) {
+  /* Text formatting */
+  strong {
     font-weight: 600;
     color: #ffffff;
   }
   
-  :deep(em) {
+  em {
     font-style: italic;
     color: #d1d5db;
   }
   
-  :deep(del) {
+  del {
     text-decoration: line-through;
     color: #9ca3af;
   }
   
-  // Code blocks
-  :deep(.code-wrapper) {
+  /* Code blocks */
+  .code-wrapper {
     margin: 0.5rem 0;
     border-radius: 8px;
     overflow: hidden;
@@ -329,7 +329,7 @@ function onRootClick(event: MouseEvent) {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
   
-  :deep(.code-header) {
+  .code-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -339,14 +339,14 @@ function onRootClick(event: MouseEvent) {
     font-size: 12px;
   }
   
-  :deep(.code-lang) {
+  .code-lang {
     color: #888;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
   
-  :deep(.copy-btn) {
+  .copy-btn {
     display: flex;
     align-items: center;
     gap: 4px;
@@ -376,7 +376,7 @@ function onRootClick(event: MouseEvent) {
     }
   }
   
-  :deep(.code-block) {
+  .code-block {
     margin: 0;
     padding: 16px;
     background: #1e1e1e;
@@ -424,8 +424,8 @@ function onRootClick(event: MouseEvent) {
     }
   }
   
-  // Inline code
-  :deep(.code-inline) {
+  /* Inline code */
+  .code-inline {
     background: #2d2d2d;
     color: #e6e6e6;
     padding: 2px 6px;
@@ -436,8 +436,8 @@ function onRootClick(event: MouseEvent) {
     white-space: nowrap;
   }
   
-  // Blockquotes
-  :deep(blockquote) {
+  /* Blockquotes */
+  blockquote {
     margin: 0.5rem 0;
     padding: 0.375rem 0.5rem;
     border-left: 4px solid #60a5fa;
@@ -455,15 +455,15 @@ function onRootClick(event: MouseEvent) {
     }
   }
   
-  // Tables
-  :deep(.table-wrapper) {
+  /* Tables */
+  .table-wrapper {
     margin: 0.5rem 0;
     overflow-x: auto;
     border-radius: 8px;
     border: 1px solid #333;
   }
   
-  :deep(.markdown-table) {
+  .markdown-table {
     width: 100%;
     border-collapse: collapse;
     margin: 0;
@@ -490,8 +490,8 @@ function onRootClick(event: MouseEvent) {
     }
   }
   
-  // Images
-  :deep(.markdown-image) {
+  /* Images */
+  .markdown-image {
     max-width: 100%;
     height: auto;
     border-radius: 4px;
@@ -499,113 +499,113 @@ function onRootClick(event: MouseEvent) {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
   
-  // Horizontal rules
-  :deep(hr) {
+  /* Horizontal rules */
+  hr {
     border: none;
     height: 1px;
     background: #333;
     margin: 0.5rem 0;
   }
   
-  // Highlight.js syntax highlighting styles
-  :deep(.hljs) {
+  /* Highlight.js syntax highlighting styles */
+  .hljs {
     background: #1e1e1e !important;
     color: #d4d4d4 !important;
   }
   
-  :deep(.hljs-comment,
-  .hljs-quote) {
+  .hljs-comment,
+  .hljs-quote {
     color: #6a9955;
     font-style: italic;
   }
   
-  :deep(.hljs-keyword,
+  .hljs-keyword,
   .hljs-selector-tag,
-  .hljs-subst) {
+  .hljs-subst {
     color: #569cd6;
     font-weight: bold;
   }
   
-  :deep(.hljs-number,
+  .hljs-number,
   .hljs-literal,
   .hljs-variable,
   .hljs-template-variable,
-  .hljs-tag .hljs-attr) {
+  .hljs-tag .hljs-attr {
     color: #b5cea8;
   }
   
-  :deep(.hljs-string,
-  .hljs-doctag) {
+  .hljs-string,
+  .hljs-doctag {
     color: #ce9178;
   }
   
-  :deep(.hljs-title,
+  .hljs-title,
   .hljs-section,
-  .hljs-selector-id) {
+  .hljs-selector-id {
     color: #dcdcaa;
     font-weight: bold;
   }
   
-  :deep(.hljs-subst) {
+  .hljs-subst {
     font-weight: normal;
   }
   
-  :deep(.hljs-type,
-  .hljs-class .hljs-title) {
+  .hljs-type,
+  .hljs-class .hljs-title {
     color: #4ec9b0;
     font-weight: bold;
   }
   
-  :deep(.hljs-tag,
+  .hljs-tag,
   .hljs-name,
-  .hljs-attribute) {
+  .hljs-attribute {
     color: #569cd6;
     font-weight: normal;
   }
   
-  :deep(.hljs-regexp,
-  .hljs-link) {
+  .hljs-regexp,
+  .hljs-link {
     color: #d16969;
   }
   
-  :deep(.hljs-symbol,
-  .hljs-bullet) {
+  .hljs-symbol,
+  .hljs-bullet {
     color: #dcdcaa;
   }
   
-  :deep(.hljs-built_in,
-  .hljs-builtin-name) {
+  .hljs-built_in,
+  .hljs-builtin-name {
     color: #4ec9b0;
   }
   
-  :deep(.hljs-meta) {
+  .hljs-meta {
     color: #569cd6;
   }
   
-  :deep(.hljs-deletion) {
+  .hljs-deletion {
     background: #fdd;
   }
   
-  :deep(.hljs-addition) {
+  .hljs-addition {
     background: #dfd;
   }
   
-  :deep(.hljs-emphasis) {
+  .hljs-emphasis {
     font-style: italic;
   }
   
-  :deep(.hljs-strong) {
+  .hljs-strong {
     font-weight: bold;
   }
   
-  // Responsive design
+  /* Responsive design */
   @media (max-width: 768px) {
-    :deep(.code-block) {
+    .code-block {
       font-size: 12px;
       padding: 12px;
     }
     
-    :deep(.markdown-table) {
+    .markdown-table {
       font-size: 14px;
       
       th, td {
@@ -613,15 +613,15 @@ function onRootClick(event: MouseEvent) {
       }
     }
     
-    :deep(h1) {
+    h1 {
       font-size: 1.75rem;
     }
     
-    :deep(h2) {
+    h2 {
       font-size: 1.375rem;
     }
     
-    :deep(h3) {
+    h3 {
       font-size: 1.125rem;
     }
   }

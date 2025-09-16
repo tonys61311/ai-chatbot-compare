@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { AIProviderType } from '@/types/ai'
+import { createAllProviderUIs } from '@/providers/ui/factory'
+
+const providers = createAllProviderUIs()
 </script>
 
 <template>
@@ -9,9 +10,7 @@ import { AIProviderType } from '@/types/ai'
     <p style="margin-top: 0">簡易版 ChatGPT 介面（之後再依 type 微調主題）</p>
 
     <div class="grid-3">
-      <ChatWindow :type="AIProviderType.OpenAI" title="OpenAI" />
-      <ChatWindow :type="AIProviderType.Gemini" title="Gemini" />
-      <ChatWindow :type="AIProviderType.DeepSeek" title="DeepSeek" />
+      <ChatWindow v-for="p in providers" :key="p.type" :provider="p" />
     </div>
   </div>
 </template>

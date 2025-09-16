@@ -1,11 +1,6 @@
-import type { 
-  AIProviderType, 
-  ChatMessageAPI, 
-  ChatRequest, 
-  ChatSuccessResult, 
-  ChatErrorResult, 
-  ChatResult 
-} from '@/types/ai'
+import type { AIProviderType, ChatRequest } from '@/types/ai'
+import type { ProviderModel } from '@/types/ai'
+import { PROVIDER_MODELS } from './models.config'
 
 export abstract class BaseAIProvider {
   public readonly type: AIProviderType
@@ -14,6 +9,9 @@ export abstract class BaseAIProvider {
   }
 
   abstract chat(request: ChatRequest): Promise<string>
+  getModels(): ProviderModel[] {
+    return PROVIDER_MODELS[this.type] || []
+  }
 }
 
 

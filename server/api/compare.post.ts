@@ -1,8 +1,9 @@
 import { runChat } from '../ai/adapter'
 import { AIProviderType, ALL_AI_PROVIDERS, ChatRequest, ChatResult } from '@/types/ai'
+import type { CompareRequest, CompareResponse } from '@/types/api/compare'
 import type { H3Event } from 'h3'
 
-interface CompareRequest { prompt: string; providers?: AIProviderType[] }
+// use shared CompareRequest from types
 
 // very simple in-memory rate limit and cache (per process)
 const requestCounts = new Map<string, { count: number; resetAt: number }>()
@@ -51,7 +52,8 @@ export default defineEventHandler(async (event) => {
 
   const results = await Promise.all(usedProviders.map(p => runChat(p, { messages })))
 
-  const data = { results: results as ChatResult[] }
-  responseCache.set(cacheKey, { data, expireAt: now + 15_000 })
-  return data
+  const payload = { results: results as ChatResult[] }
+  responseCache.set(cacheKey, { data: payload, expireAt: now + 15_000 })
+  const resp: CompareResponse = { data: payload }
+  return resp
 })
