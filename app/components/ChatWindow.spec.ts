@@ -10,7 +10,9 @@ import '@testing-library/jest-dom'
 const mockStore = {
   getMessages: vi.fn(() => []) as any,
   isLoading: vi.fn(() => false) as any,
-  send: vi.fn() as any
+  send: vi.fn() as any,
+  getModels: vi.fn(() => []) as any,
+  loadModels: vi.fn() as any
 }
 
 const mockScrollComposable = {
@@ -264,5 +266,73 @@ describe('ChatWindow', () => {
     expect(screen.getByRole('button', { name: '語音' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '送出' })).toBeInTheDocument()
     expect(screen.getByRole('textbox')).toBeInTheDocument()
+  })
+
+  it('should display model dropdown when models are loaded', async () => {
+    const models = [{ id: 'gpt-4o-mini', label: 'GPT-4o mini', default: true }]
+    mockStore.getModels.mockReturnValue(models)
+
+    render(ChatWindow, {
+      props: {
+        provider: new OpenAIProviderUI()
+      }
+    })
+
+    // 等待 onMounted 執行完成
+    await nextTick()
+    
+    expect(screen.getByText('GPT-4o mini')).toBeInTheDocument()
+  })
+
+  it('should not call loadModels on mount (handled by parent)', () => {
+    render(ChatWindow, {
+      props: {
+        provider: new OpenAIProviderUI()
+      }
+    })
+
+    expect(mockStore.loadModels).not.toHaveBeenCalled()
+  })
+
+  it('should render a model dropdown in header on the right of title', () => {
+    render(ChatWindow, {
+      props: {
+        provider: new OpenAIProviderUI()
+      }
+    })
+
+    const titleEl = screen.getByText('ChatGPT')
+    const dropdownBtn = screen.getByRole('button', { name: '模型選擇' })
+    expect(dropdownBtn).toBeInTheDocument()
+
+    const headerEl = titleEl.closest('.chat__header')
+    expect(headerEl).not.toBeNull()
+    // ensure dropdown is placed within header (to the right in layout)
+    expect(headerEl).toContainElement(dropdownBtn)
+  })
+
+  it('should allow selecting a model option and update the trigger label', async () => {
+    const models = [
+      { id: 'gpt-4o-mini', label: 'GPT-4o mini', default: true },
+      { id: 'gpt-4o', label: 'GPT-4o', default: false }
+    ]
+    mockStore.getModels.mockReturnValue(models)
+
+    render(ChatWindow, {
+      props: {
+        provider: new OpenAIProviderUI()
+      }
+    })
+
+    // 等待 onMounted 執行完成
+    await nextTick()
+
+    const dropdownBtn = screen.getByRole('button', { name: '模型選擇' })
+    await fireEvent.click(dropdownBtn)
+
+    const option = await screen.findByRole('option', { name: 'GPT-4o' })
+    await fireEvent.click(option)
+
+    expect(dropdownBtn).toHaveTextContent('GPT-4o')
   })
 })

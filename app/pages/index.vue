@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { createAllProviderUIs } from '@/providers/ui/factory'
+import { ref, onMounted } from 'vue'
+import { useChatStore } from '@/stores/chat'
 
 const providers = createAllProviderUIs()
+
+const store = useChatStore()
+const modelsLoaded = computed(() => store.isModelsLoaded)
+
+onMounted(async () => {
+  await store.initData()
+})
 </script>
 
 <template>
@@ -10,7 +19,7 @@ const providers = createAllProviderUIs()
     <p style="margin-top: 0">簡易版 ChatGPT 介面（之後再依 type 微調主題）</p>
 
     <div class="grid-3">
-      <ChatWindow v-for="p in providers" :key="p.type" :provider="p" />
+      <ChatWindow v-if="modelsLoaded" v-for="p in providers" :key="p.type" :provider="p" />
     </div>
   </div>
 </template>

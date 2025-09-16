@@ -1,13 +1,32 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import IconButton from '@/components/common/IconButton.vue'
 import CodeMarkdown from '@/components/CodeMarkdown.vue'
+import Dropdown from '@/components/common/Dropdown.vue'
 import { BaseAIProviderUI } from '@/providers/ui/base'
+import type { ProviderModel } from '@/types/ai'
 
 const props = defineProps<{ provider: BaseAIProviderUI }>()
 const store = useChatStore()
 const input = ref('')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
+
+const selectedModel = ref('')
+
+// 模型下拉資料
+const modelItems = computed(() => {
+  const models = store.getModels(props.provider.type)
+  return models.map((m: ProviderModel) => ({ label: m.label, value: m.id }))
+})
+
+// 設定預設選中的模型
+onMounted(() => {
+  const models = store.getModels(props.provider.type)
+  const defaultModel = models.find(m => m.default) || models[0]
+  if (defaultModel) {
+    selectedModel.value = defaultModel.id
+  }
+})
 
 // 使用滾動 composable
 const { listEl, scrollToBottom, streamToMessage } = useAutoScroll()
@@ -54,6 +73,7 @@ watch(input, () => {
   <div class="chat">
     <div class="chat__header">
       <div class="chat__title">{{ props.provider.getTitle() }}</div>
+      <Dropdown v-model="selectedModel" :data="modelItems" aria-label="模型選擇" />
     </div>
     <div ref="listEl" class="chat__list">
       <div v-for="m in messages" :key="m.id" class="msg" :class="m.role">
@@ -102,6 +122,10 @@ watch(input, () => {
 .chat__header {
   padding: 10px 12px;
   border-bottom: 1px solid #23252b;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  //justify-content: space-between;
 }
 
 .chat__title {

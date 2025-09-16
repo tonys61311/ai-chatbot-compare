@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { reactive } from 'vue'
-import type { AIProviderType } from '@/types/ai'
+import type { AIProviderType, ProviderModel } from '@/types/ai'
 import type { ChatMessage, ChatResult, ModelChat } from '@/types/api/chat-batch'
 import { generateId, escapeHtml } from '@/utils/helpers'
 import { apiClient } from '@/utils/api'
+import { ALL_AI_PROVIDERS } from '@/types/ai'
 
 interface ProviderChatState {
   messages: ChatMessage[]
@@ -12,21 +13,34 @@ interface ProviderChatState {
 
 interface ChatState {
   byProvider: Partial<Record<AIProviderType, ProviderChatState>>
+  models: Partial<Record<AIProviderType, ProviderModel[]>>
+  modelsLoaded: boolean
 }
 
 export const useChatStore = defineStore('chat', {
   state: (): ChatState => ({
-    byProvider: {}
+    byProvider: {},
+    models: {},
+    modelsLoaded: false
   }),
   getters: {
+    isModelsLoaded: (state) => state.modelsLoaded,
     getMessages: (state) => (provider: AIProviderType): ChatMessage[] => {
       return state.byProvider[provider]?.messages || []
     },
     isLoading: (state) => (provider: AIProviderType): boolean => {
       return !!state.byProvider[provider]?.loading
+    },
+    getModels: (state) => (provider: AIProviderType): ProviderModel[] => {
+      return state.models[provider] || []
     }
   },
   actions: {
+    // initialize 先發api 載入模型資料，再載入畫面
+    async initData() {
+      await this.loadModels()
+      this.modelsLoaded = true
+    },
     ensureProvider(provider: AIProviderType) {
       if (!this.byProvider[provider]) {
         this.byProvider[provider] = reactive<ProviderChatState>({ messages: [], loading: false })
@@ -66,6 +80,12 @@ export const useChatStore = defineStore('chat', {
       } finally {
         bucket.loading = false
       }
+    },
+    async loadModels() {
+      const modelsData = await apiClient.getProviderModels(ALL_AI_PROVIDERS)
+      modelsData.forEach(({ type, models }) => {
+        this.models[type] = models
+      })
     }
   }
 })
