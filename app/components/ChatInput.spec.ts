@@ -18,7 +18,7 @@ describe('ChatInput', () => {
       props: { send }
     })
     await wrapper.find('textarea').setValue('hello')
-    await wrapper.find('textarea').trigger('keydown.enter')
+    await wrapper.find('textarea').trigger('keydown', { key: 'Enter' })
     expect(send).toHaveBeenCalledWith('hello')
   })
 
@@ -32,7 +32,7 @@ describe('ChatInput', () => {
     await wrapper.find('textarea').setValue('async test')
     
     // 觸發發送
-    await wrapper.find('textarea').trigger('keydown.enter')
+    await wrapper.find('textarea').trigger('keydown', { key: 'Enter' })
     
     // 檢查 send 被調用
     expect(send).toHaveBeenCalledWith('async test')
@@ -52,5 +52,187 @@ describe('ChatInput', () => {
     await wrapper.find('textarea').setValue('not empty')
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[aria-label="送出"]').attributes('disabled')).toBeUndefined()
+  })
+
+  // ===== 中文輸入法測試 =====
+  describe('中文輸入法 (IME) 測試', () => {
+    it('輸入法輸入過程中按 Enter 不應發送', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send }
+      })
+      
+      const textarea = wrapper.find('textarea')
+      
+      // 模擬輸入法開始
+      await textarea.trigger('compositionstart')
+      
+      // 設置輸入值
+      await textarea.setValue('你好')
+      
+      // 在輸入法輸入過程中按 Enter
+      await textarea.trigger('keydown', { key: 'Enter' })
+      
+      // 應該不會發送
+      expect(send).not.toHaveBeenCalled()
+    })
+
+    it('輸入法結束後按 Enter 應該發送完整文字', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send }
+      })
+      
+      const textarea = wrapper.find('textarea')
+      
+      // 模擬輸入法開始
+      await textarea.trigger('compositionstart')
+      
+      // 設置輸入值
+      await textarea.setValue('你好')
+      
+      // 模擬輸入法結束
+      await textarea.trigger('compositionend')
+      
+      // 輸入法結束後按 Enter
+      await textarea.trigger('keydown', { key: 'Enter' })
+      
+      // 應該發送完整文字
+      expect(send).toHaveBeenCalledWith('你好')
+    })
+
+    it('混合中英文輸入應該正確處理', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send }
+      })
+      
+      const textarea = wrapper.find('textarea')
+      
+      // 先輸入英文
+      await textarea.setValue('hello')
+      
+      // 模擬輸入法開始輸入中文
+      await textarea.trigger('compositionstart')
+      await textarea.setValue('hello你好')
+      
+      // 輸入法結束
+      await textarea.trigger('compositionend')
+      
+      // 按 Enter 發送
+      await textarea.trigger('keydown', { key: 'Enter' })
+      
+      // 應該發送完整文字
+      expect(send).toHaveBeenCalledWith('hello你好')
+    })
+
+    it('Shift+Enter 應該換行而不發送', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send }
+      })
+      
+      const textarea = wrapper.find('textarea')
+      await textarea.setValue('hello')
+      
+      // 按 Shift+Enter
+      await textarea.trigger('keydown', { 
+        key: 'Enter', 
+        shiftKey: true 
+      })
+      
+      // 應該不會發送
+      expect(send).not.toHaveBeenCalled()
+    })
+
+    it('Ctrl+Enter 應該不發送', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send }
+      })
+      
+      const textarea = wrapper.find('textarea')
+      await textarea.setValue('hello')
+      
+      // 按 Ctrl+Enter
+      await textarea.trigger('keydown', { 
+        key: 'Enter', 
+        ctrlKey: true 
+      })
+      
+      // 應該不會發送
+      expect(send).not.toHaveBeenCalled()
+    })
+
+    it('loading 狀態下不應發送', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send, loading: true }
+      })
+      
+      const textarea = wrapper.find('textarea')
+      await textarea.setValue('hello')
+      
+      // 按 Enter
+      await textarea.trigger('keydown', { key: 'Enter' })
+      
+      // 應該不會發送
+      expect(send).not.toHaveBeenCalled()
+    })
+
+    it('空文字時不應發送', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send }
+      })
+      
+      const textarea = wrapper.find('textarea')
+      await textarea.setValue('   ') // 只有空白
+      
+      // 按 Enter
+      await textarea.trigger('keydown', { key: 'Enter' })
+      
+      // 應該不會發送
+      expect(send).not.toHaveBeenCalled()
+    })
+  })
+
+  // ===== 按鈕測試 =====
+  describe('按鈕功能測試', () => {
+    it('點擊發送按鈕應該發送', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send }
+      })
+      
+      const textarea = wrapper.find('textarea')
+      await textarea.setValue('hello')
+      
+      // 點擊發送按鈕
+      await wrapper.find('[aria-label="送出"]').trigger('click')
+      
+      // 應該發送
+      expect(send).toHaveBeenCalledWith('hello')
+    })
+
+    it('loading 狀態下按鈕應該顯示 loading 圖標', () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send, loading: true }
+      })
+      
+      const button = wrapper.find('[aria-label="送出"]')
+      expect(button.classes()).toContain('spinning')
+    })
+
+    it('loading 狀態下按鈕應該被禁用', () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send, loading: true }
+      })
+      
+      const button = wrapper.find('[aria-label="送出"]')
+      expect(button.attributes('disabled')).toBeDefined()
+    })
   })
 })

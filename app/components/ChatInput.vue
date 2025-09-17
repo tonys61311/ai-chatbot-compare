@@ -2,7 +2,6 @@
 import { ref, nextTick, computed } from 'vue'
 import IconButton from '@/components/common/IconButton.vue'
 
-
 const props = defineProps<{
     placeholder?: string
     send: (text: string) => Promise<any> | any
@@ -13,13 +12,14 @@ const props = defineProps<{
 const input = ref('')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const selfLoading = ref(false)
+const isComposing = ref(false) // 新增：追蹤是否正在輸入法輸入中
 
 // loading 若外面沒給 (有給的話會是 boolean) 則用內部 selfLoading
 const isLoading = computed(() => typeof props.loading === 'boolean' ? props.loading : selfLoading.value)
 
 async function handleSend() {
     const text = input.value.trim()
-    if (!text || selfLoading.value) return
+    if (!text || selfLoading.value || isComposing.value) return
     input.value = ''
     selfLoading.value = true
     try {
@@ -40,13 +40,42 @@ function adjustTextareaHeight() {
         }
     })
 }
+
+// 新增：處理輸入法開始
+function handleCompositionStart() {
+    isComposing.value = true
+}
+
+// 新增：處理輸入法結束
+function handleCompositionEnd() {
+    isComposing.value = false
+}
+
+// 新增：處理 Enter 鍵，考慮輸入法狀態和 loading 狀態
+function handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
+        if (!isComposing.value && !isLoading.value) {
+            event.preventDefault()
+            handleSend()
+        }
+    }
+}
 </script>
 
 <template>
     <div class="composer">
         <IconButton icon="mdi:plus" :size="30" ariaLabel="新增" />
-        <textarea class="composer__input" v-model="input" :placeholder="isLoading ? '請稍候…' : placeholder"
-            @keydown.enter.exact.prevent="handleSend" rows="1" ref="textareaRef" @input="adjustTextareaHeight" />
+        <textarea 
+            class="composer__input" 
+            v-model="input" 
+            :placeholder="isLoading ? '請稍候…' : placeholder"
+            @keydown="handleKeydown"
+            @compositionstart="handleCompositionStart"
+            @compositionend="handleCompositionEnd"
+            rows="1" 
+            ref="textareaRef" 
+            @input="adjustTextareaHeight" 
+        />
         <div class="composer__actions">
             <IconButton icon="mdi:microphone" :size="30" ariaLabel="語音" />
             <IconButton 
@@ -83,7 +112,6 @@ function adjustTextareaHeight() {
     display: inline-flex;
     align-items: center;
 }
-
 
 .composer {
     display: flex;
