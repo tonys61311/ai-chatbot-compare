@@ -11,5 +11,10 @@ export default defineNuxtConfig({
     public: {
       appName: 'ai-chatbot-compare'
     }
-  }
+  },
+  // 開發模式下的 source map
+  sourcemap: process.env.NODE_ENV === 'development' ? {
+    server: true,
+    client: true
+  } : false,
 })
