@@ -150,8 +150,10 @@ describe('ChatWindow', () => {
       }
     })
 
-    expect(screen.getByPlaceholderText('請稍候…')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '送出' })).toBeInTheDocument()
+    // 檢查按鈕是否存在（loading 狀態下按鈕應該被 disabled）
+    const sendButton = screen.getByRole('button', { name: '送出' })
+    expect(sendButton).toBeInTheDocument()
+    expect(sendButton).toBeDisabled()
   })
 
   it('should display messages from store', () => {

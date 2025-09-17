@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted } from 'vue'
-import IconButton from '@/components/common/IconButton.vue'
 import CodeMarkdown from '@/components/CodeMarkdown.vue'
 import Dropdown from '@/components/common/Dropdown.vue'
+import ChatInput from '@/components/ChatInput.vue'
 import { BaseAIProviderUI } from '@/providers/ui/base'
 import type { ProviderModel } from '@/types/ai'
 
@@ -46,21 +46,31 @@ function adjustTextareaHeight() {
 }
 
 const messages = computed(() => store.getMessages(props.provider.type))
-const loading = computed(() => store.isLoading(props.provider.type))
+const loading = ref(false)
 
-async function send() {
-  const text = input.value.trim()
+// 核心發送邏輯
+async function sendMessage(text: string) {
   if (!text || loading.value) return
-  input.value = ''
+  loading.value = true
   // 用戶發送訊息時立即滾動到底部
   scrollToBottom()
-  
   const result = await store.send(props.provider.type, text)
   if (result?.message && result?.content) {
     // 使用串流顯示回應（word 模式保留空白與縮排）
     await streamToMessage(result.message, result.content, 20, 'word')
   }
+  loading.value = false
 }
+
+// 外部調用的 send 方法（由父元件使用）
+async function sendExternal(externalText: string) {
+  await sendMessage(externalText)
+}
+
+// 暴露 sendExternal 方法給父元件使用
+defineExpose({
+  send: sendExternal
+})
 
 // 監聽輸入變化，自動調整 textarea 高度
 watch(input, () => {
@@ -84,22 +94,12 @@ watch(input, () => {
       <div v-if="!messages.length" class="placeholder">輸入訊息開始對話</div>
     </div>
     <div class="chat__input">
-      <div class="composer">
-        <IconButton icon="mdi:plus" :size="30" :disabled="loading" aria-label="新增" />
-        <textarea
-          class="composer__input"
-          v-model="input"
-          :placeholder="loading ? '請稍候…' : '詢問任何問題'"
-          :disabled="loading"
-          @keydown.enter.exact.prevent="send"
-          rows="1"
-          ref="textareaRef"
-        />
-        <div class="composer__actions">
-          <IconButton icon="mdi:microphone" :size="30" :disabled="loading" aria-label="語音" />
-          <IconButton icon="mdi:send" variant="primary" :size="30" :disabled="!input.trim() || loading" @click="send" aria-label="送出" />
-        </div>
-      </div>
+      <ChatInput
+        :placeholder="'詢問任何問題'"
+        :send="async (text: string) => await sendMessage(text)"
+        sendLabel="送出"
+        :loading="loading"
+      />
     </div>
   </div>
 </template>
@@ -247,5 +247,4 @@ watch(input, () => {
 // ===== 按鈕樣式 =====
 /* 使用 IconButton 元件，移除本地按鈕樣式 */
 </style>
-
 

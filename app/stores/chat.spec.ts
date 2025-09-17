@@ -32,7 +32,7 @@ describe('useChatStore', () => {
       await store.loadModels()
 
       expect(apiClient.getProviderModels).toHaveBeenCalledWith(ALL_AI_PROVIDERS)
-      expect(store.getModels(AIProviderType.OpenAI)).toEqual(mockModels[0].models)
+      expect(store.getModels(AIProviderType.OpenAI)).toEqual(mockModels[0]?.models)
     })
 
     it('should return empty array when models not loaded', () => {
