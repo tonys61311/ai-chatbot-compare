@@ -14,9 +14,8 @@ const input = ref('')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const selfLoading = ref(false)
 
-const isLoading = computed(() => {
-    return props.loading ?? selfLoading.value
-})
+// loading 若外面沒給 (有給的話會是 boolean) 則用內部 selfLoading
+const isLoading = computed(() => typeof props.loading === 'boolean' ? props.loading : selfLoading.value)
 
 async function handleSend() {
     const text = input.value.trim()
@@ -50,8 +49,15 @@ function adjustTextareaHeight() {
             @keydown.enter.exact.prevent="handleSend" rows="1" ref="textareaRef" @input="adjustTextareaHeight" />
         <div class="composer__actions">
             <IconButton icon="mdi:microphone" :size="30" ariaLabel="語音" />
-            <IconButton icon="mdi:send" variant="primary" :size="30" :disabled="!input.trim() || isLoading"
-                @click="handleSend" :ariaLabel="props.sendLabel || '送出'" />
+            <IconButton 
+                :icon="isLoading ? 'mdi:loading' : 'mdi:send'" 
+                variant="primary" 
+                :size="30" 
+                :class="{ 'spinning': isLoading }"
+                :disabled="!input.trim() || isLoading"
+                @click="handleSend" 
+                :ariaLabel="props.sendLabel || '送出'" 
+            />
         </div>
     </div>
 </template>
@@ -78,9 +84,6 @@ function adjustTextareaHeight() {
     align-items: center;
 }
 
-.icon-btn.primary {
-    /* 可自訂主色 */
-}
 
 .composer {
     display: flex;

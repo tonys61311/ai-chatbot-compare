@@ -32,8 +32,7 @@ async function sendToAll(text?: string) {
 
 <template>
   <div class="container">
-    <h1 style="margin-bottom: 8px">AI Chatbot Compare</h1>
-    <p style="margin-top: 0">簡易版 ChatGPT 介面（之後再依 type 微調主題）</p>
+    <h1>AI Chatbot Compare</h1>
 
     <div class="grid-3">
       <ChatWindow 
@@ -55,51 +54,34 @@ async function sendToAll(text?: string) {
 </template>
 
 <style lang="scss" scoped>
+// ===== 主容器 =====
 .container {
   height: 100vh;
   display: flex;
   flex-direction: column;
   padding: 24px;
+  gap: 10px;
   box-sizing: border-box;
-}
-
-.global-input {
-  display: flex;
-  gap: 12px;
-  margin: 16px 0;
-  padding: 12px;
-  background: #2a2d36;
-  border: 1px solid #373a46;
-  border-radius: 8px;
-}
-
-.global-input__field {
-  flex: 1;
-  background: transparent;
-  border: none;
+  background: #0f1115;
   color: #e6e6e6;
-  outline: none;
-  font-size: 14px;
 }
 
-.global-input__button {
-  padding: 8px 16px;
-  background: #1e3a5f;
+// ===== 標題區域 =====
+h1 {
   color: #e6e6e6;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+  font-weight: 600;
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+p {
+  color: #777;
   font-size: 14px;
+  margin-top: 0;
 }
 
-.global-input__button:hover {
-  background: #2a4a6f;
-}
 
-.actions {
-  margin: 12px 0;
-}
-
+// ===== 網格布局 =====
 .grid-3 {
   display: grid;
   gap: 12px;
@@ -114,6 +96,7 @@ async function sendToAll(text?: string) {
   min-height: 0;
   height: 100%;
 }
+
 
 /* ChatWindow 控制內部樣式，這裡只保留網格布局 */
 </style>

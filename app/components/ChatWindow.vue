@@ -47,14 +47,16 @@ function adjustTextareaHeight() {
 
 const messages = computed(() => store.getMessages(props.provider.type))
 const loading = ref(false)
-
+const isThinking = ref(false)
 // 核心發送邏輯
 async function sendMessage(text: string) {
   if (!text || loading.value) return
   loading.value = true
+  isThinking.value = true
   // 用戶發送訊息時立即滾動到底部
   scrollToBottom()
   const result = await store.send(props.provider.type, text)
+  isThinking.value = false
   if (result?.message && result?.content) {
     // 使用串流顯示回應（word 模式保留空白與縮排）
     await streamToMessage(result.message, result.content, 20, 'word')
@@ -92,6 +94,10 @@ watch(input, () => {
         </div>
       </div>
       <div v-if="!messages.length" class="placeholder">輸入訊息開始對話</div>
+      <div v-if="isThinking" class="loading-indicator">
+        <span>AI 思考中...</span>
+        <div class="loading-spinner"></div>
+      </div>
     </div>
     <div class="chat__input">
       <ChatInput
@@ -170,6 +176,35 @@ watch(input, () => {
   color: #777;
   text-align: center;
   margin-top: 20px;
+}
+
+// ===== Loading 指示器 =====
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 16px;
+  color: #777;
+  font-size: 14px;
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #3a3f55;
+  border-top: 2px solid #4a5068;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .msg {

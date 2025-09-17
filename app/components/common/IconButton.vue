@@ -97,6 +97,20 @@ const iconStyle = computed(() => ({ fontSize: `${iconFontSizePx.value}px` }))
     box-shadow: 0 0 0 3px rgba(58, 63, 85, 0.35);
   }
 }
+
+// ===== Spinning 動畫 =====
+.ibtn.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 </style>
 
 
