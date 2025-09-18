@@ -19,6 +19,7 @@ export interface ChatMessage extends ChatMessageAPI {
 export interface ModelChat {
   provider: AIProviderType
   messages: ChatMessageAPI[]
+  model: string
   temperature?: number
   maxTokens?: number
 }

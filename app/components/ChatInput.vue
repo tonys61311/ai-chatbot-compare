@@ -7,9 +7,24 @@ const props = defineProps<{
     send: (text: string) => Promise<any> | any
     sendLabel?: string
     loading?: boolean //loading若外面沒給則用裡面loading判斷
+    modelValue?: string // 外部 v-model 綁定
 }>()
 
-const input = ref('')
+const emit = defineEmits<{
+    'update:modelValue': [value: string]
+}>()
+
+const internalInput = ref('')
+const input = computed({
+    get: () => props.modelValue !== undefined ? props.modelValue : internalInput.value,
+    set: (value: string) => {
+        if (props.modelValue !== undefined) {
+            emit('update:modelValue', value)
+        } else {
+            internalInput.value = value
+        }
+    }
+})
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const selfLoading = ref(false)
 const isComposing = ref(false) // 新增：追蹤是否正在輸入法輸入中
@@ -21,6 +36,7 @@ async function handleSend() {
     const text = input.value.trim()
     if (!text || selfLoading.value || isComposing.value) return
     input.value = ''
+    adjustTextareaHeight()
     selfLoading.value = true
     try {
         await (typeof props.send === 'function' ? props.send(text) : undefined)

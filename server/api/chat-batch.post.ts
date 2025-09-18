@@ -15,9 +15,17 @@ export default defineEventHandler(async (event) => {
   const results = await Promise.all(
     list.map(async (c) => {
       const provider = c.provider as AIProviderType
+      if (!c.model) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Model is required for all chat requests'
+        })
+      }
+
       const safe: ModelChat = {
         provider,
         messages: Array.isArray(c.messages) ? c.messages : [],
+        model: c.model,
         ...(typeof c.temperature === 'number' ? { temperature: c.temperature } : {}),
         ...(typeof c.maxTokens === 'number' ? { maxTokens: c.maxTokens } : {})
       }

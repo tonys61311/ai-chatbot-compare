@@ -197,6 +197,66 @@ describe('ChatInput', () => {
     })
   })
 
+  // ===== v-model 測試 =====
+  describe('v-model 測試', () => {
+    it('應該支援外部 v-model 綁定', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { 
+          send,
+          modelValue: '外部輸入值'
+        }
+      })
+      
+      const textarea = wrapper.find('textarea')
+      expect(textarea.element.value).toBe('外部輸入值')
+      
+      // 修改輸入值
+      await textarea.setValue('修改後的值')
+      
+      // 檢查是否觸發了 update:modelValue 事件
+      expect(wrapper.emitted('update:modelValue')).toBeTruthy()
+      expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['修改後的值'])
+    })
+
+    it('沒有 v-model 時應該使用內部狀態', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send }
+      })
+      
+      const textarea = wrapper.find('textarea')
+      
+      // 修改輸入值
+      await textarea.setValue('內部輸入值')
+      
+      // 檢查內部狀態
+      expect(textarea.element.value).toBe('內部輸入值')
+      
+      // 不應該觸發 update:modelValue 事件
+      expect(wrapper.emitted('update:modelValue')).toBeFalsy()
+    })
+
+    it('v-model 綁定時發送後應該清空外部值', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { 
+          send,
+          modelValue: '要發送的值'
+        }
+      })
+      
+      const textarea = wrapper.find('textarea')
+      
+      // 發送訊息
+      await textarea.trigger('keydown', { key: 'Enter' })
+      
+      // 檢查是否觸發了清空事件
+      expect(wrapper.emitted('update:modelValue')).toBeTruthy()
+      expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([''])
+    })
+  })
+
   // ===== 按鈕測試 =====
   describe('按鈕功能測試', () => {
     it('點擊發送按鈕應該發送', async () => {

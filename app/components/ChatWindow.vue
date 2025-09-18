@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import CodeMarkdown from '@/components/CodeMarkdown.vue'
 import Dropdown from '@/components/common/Dropdown.vue'
 import ChatInput from '@/components/ChatInput.vue'
@@ -8,9 +8,6 @@ import type { ProviderModel } from '@/types/ai'
 
 const props = defineProps<{ provider: BaseAIProviderUI }>()
 const store = useChatStore()
-const input = ref('')
-const textareaRef = ref<HTMLTextAreaElement | null>(null)
-
 const selectedModel = ref('')
 
 // 模型下拉資料
@@ -31,23 +28,11 @@ onMounted(() => {
 // 使用滾動 composable
 const { listEl, scrollToBottom, streamToMessage } = useAutoScroll()
 
-
-function adjustTextareaHeight() {
-  nextTick(() => {
-    const textarea = textareaRef.value
-    if (textarea) {
-      // 重置高度以計算正確的 scrollHeight
-      textarea.style.height = 'auto'
-      // 設定新高度，最大 120px
-      const newHeight = Math.min(textarea.scrollHeight, 120)
-      textarea.style.height = `${newHeight}px`
-    }
-  })
-}
-
 const messages = computed(() => store.getMessages(props.provider.type))
 const loading = ref(false)
 const isThinking = ref(false)
+const useStreaming = ref(true) // 預設啟用串流
+
 // 核心發送邏輯
 async function sendMessage(text: string) {
   if (!text || loading.value) return
@@ -55,11 +40,24 @@ async function sendMessage(text: string) {
   isThinking.value = true
   // 用戶發送訊息時立即滾動到底部
   scrollToBottom()
-  const result = await store.send(props.provider.type, text)
-  isThinking.value = false
-  if (result?.message && result?.content) {
-    // 使用串流顯示回應（word 模式保留空白與縮排）
-    await streamToMessage(result.message, result.content, 20, 'word')
+  
+  if (useStreaming.value) {
+    // 使用串流模式
+    const result = await store.sendStream(props.provider.type, text, selectedModel.value, () => {
+      if (isThinking.value) isThinking.value = false
+    })
+    if (result?.message && result?.content) {
+      // 串流模式下，內容會即時更新，不需要額外的串流顯示
+      scrollToBottom()
+    }
+  } else {
+    // 使用傳統模式
+    const result = await store.send(props.provider.type, text, selectedModel.value)
+    isThinking.value = false
+    if (result?.message && result?.content) {
+      // 使用串流顯示回應（word 模式保留空白與縮排）
+      await streamToMessage(result.message, result.content, 20, 'word')
+    }
   }
   loading.value = false
 }
@@ -74,11 +72,6 @@ defineExpose({
   send: sendExternal
 })
 
-// 監聽輸入變化，自動調整 textarea 高度
-watch(input, () => {
-  adjustTextareaHeight()
-})
-
 </script>
 
 <template>
@@ -86,6 +79,16 @@ watch(input, () => {
     <div class="chat__header">
       <div class="chat__title">{{ props.provider.getTitle() }}</div>
       <Dropdown v-model="selectedModel" :data="modelItems" aria-label="模型選擇" />
+      <div v-if="false" class="chat__controls">
+        <button 
+          class="stream-toggle" 
+          :class="{ active: useStreaming }"
+          @click="useStreaming = !useStreaming"
+          :title="useStreaming ? '關閉串流' : '開啟串流'"
+        >
+          {{ useStreaming ? '串流' : '等待' }}
+        </button>
+      </div>
     </div>
     <div ref="listEl" class="chat__list">
       <div v-for="m in messages" :key="m.id" class="msg" :class="m.role">
@@ -94,9 +97,17 @@ watch(input, () => {
         </div>
       </div>
       <div v-if="!messages.length" class="placeholder">輸入訊息開始對話</div>
-      <div v-if="isThinking" class="loading-indicator">
+      <!-- <div v-if="isThinking && !useStreaming" class="loading-indicator">
         <span>AI 思考中...</span>
         <div class="loading-spinner"></div>
+      </div> -->
+      <div v-if="isThinking" class="streaming-indicator">
+        <span>AI 正在回應...</span>
+        <div class="streaming-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
       </div>
     </div>
     <div class="chat__input">
@@ -131,11 +142,38 @@ watch(input, () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  //justify-content: space-between;
+  /* justify-content: space-between; */
 }
 
 .chat__title {
   font-weight: 600;
+}
+
+.chat__controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stream-toggle {
+  background: #2a2d36;
+  border: 1px solid #373a46;
+  color: #e6e6e6;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #3a3f55;
+  }
+
+  &.active {
+    background: #1e3a5f;
+    border-color: #4a7c9d;
+    color: #87ceeb;
+  }
 }
 
 // ===== 可重用的滾動條樣式 =====
@@ -204,6 +242,45 @@ watch(input, () => {
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+// ===== 串流指示器 =====
+.streaming-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  color: #87ceeb;
+  font-size: 14px;
+}
+
+.streaming-dots {
+  display: flex;
+  gap: 4px;
+
+  span {
+    width: 6px;
+    height: 6px;
+    background: #87ceeb;
+    border-radius: 50%;
+    animation: streaming-dot 1.4s infinite ease-in-out both;
+
+    &:nth-child(1) { animation-delay: -0.32s; }
+    &:nth-child(2) { animation-delay: -0.16s; }
+    &:nth-child(3) { animation-delay: 0s; }
+  }
+}
+
+@keyframes streaming-dot {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 

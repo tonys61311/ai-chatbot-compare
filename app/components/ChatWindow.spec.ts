@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/vue'
 import { createPinia, setActivePinia } from 'pinia'
+import { ref } from 'vue'
 import ChatWindow from './ChatWindow.vue'
 import { AIProviderType } from '@/types/ai'
 import { OpenAIProviderUI, GeminiProviderUI, DeepseekProviderUI } from '@/providers/ui/providers'
@@ -10,13 +11,18 @@ import '@testing-library/jest-dom'
 const mockStore = {
   getMessages: vi.fn(() => []) as any,
   isLoading: vi.fn(() => false) as any,
-  send: vi.fn() as any,
-  getModels: vi.fn(() => []) as any,
+  isStreaming: vi.fn(() => false) as any,
+  send: vi.fn().mockResolvedValue({ message: { id: '1', role: 'assistant', content: 'Hello' }, content: 'Hello' }) as any,
+  sendStream: vi.fn().mockResolvedValue({ message: { id: '1', role: 'assistant', content: 'Hello' }, content: 'Hello' }) as any,
+  getModels: vi.fn(() => [
+    { id: 'gpt-4o-mini', label: 'GPT-4o mini', default: true },
+    { id: 'gpt-4o', label: 'GPT-4o', default: false }
+  ]) as any,
   loadModels: vi.fn() as any
 }
 
 const mockScrollComposable = {
-  listEl: { value: null },
+  listEl: ref(null),
   scrollToBottom: vi.fn() as any,
   streamToMessage: vi.fn() as any
 }
@@ -117,7 +123,7 @@ describe('ChatWindow', () => {
     await fireEvent.update(input, 'Hello world')
     await fireEvent.click(sendButton)
 
-    expect(mockStore.send).toHaveBeenCalledWith(AIProviderType.OpenAI, 'Hello world')
+    expect(mockStore.sendStream).toHaveBeenCalledWith(AIProviderType.OpenAI, 'Hello world', 'gpt-4o-mini', expect.any(Function))
   })
 
   it('should clear input after sending message', async () => {
@@ -187,7 +193,7 @@ describe('ChatWindow', () => {
     await fireEvent.update(input, 'Hello world')
     await fireEvent.keyDown(input, { key: 'Enter' })
 
-    expect(mockStore.send).toHaveBeenCalledWith(AIProviderType.OpenAI, 'Hello world')
+    expect(mockStore.sendStream).toHaveBeenCalledWith(AIProviderType.OpenAI, 'Hello world', 'gpt-4o-mini', expect.any(Function))
   })
 
   it('should not send empty message', async () => {
@@ -239,7 +245,7 @@ describe('ChatWindow', () => {
     await fireEvent.update(input, 'Hello')
     await fireEvent.click(sendButton)
 
-    expect(mockStore.send).toHaveBeenCalledWith(AIProviderType.OpenAI, 'Hello')
+    expect(mockStore.sendStream).toHaveBeenCalledWith(AIProviderType.OpenAI, 'Hello', 'gpt-4o-mini', expect.any(Function))
   })
 
   it('should display different provider titles correctly', () => {

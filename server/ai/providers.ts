@@ -1,6 +1,7 @@
-import { BaseAIProvider } from './base'
+import { BaseAIProvider, StreamChunk } from './base'
 import { AIProviderType } from '@/types/ai'
 import type { ModelChat } from '@/types/api/chat-batch'
+import type { ChatMessageAPI } from '@/types/api/chat-batch'
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
@@ -16,7 +17,7 @@ export class OpenAIProvider extends BaseAIProvider {
     try {
       const client = new OpenAI({ apiKey: this.apiKey })
       const resp = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: request.model,
         messages: request.messages as any,
         ...(typeof request.temperature === 'number' ? { temperature: request.temperature } : {}),
         ...(typeof request.maxTokens === 'number' ? { max_tokens: request.maxTokens } : {})
@@ -29,6 +30,33 @@ export class OpenAIProvider extends BaseAIProvider {
       const code = err?.code || err?.status || err?.response?.status
       const apiMsg = err?.error?.message || err?.response?.data?.error?.message || err?.message
       const msg = apiMsg || 'OpenAI request failed'
+      throw new Error(code ? `${msg} (code: ${code})` : msg)
+    }
+  }
+
+  async *streamChat(messages: ChatMessageAPI[], model: string, options?: { temperature?: number; maxTokens?: number }): AsyncGenerator<StreamChunk> {
+    if (!this.apiKey) throw new Error('Missing OpenAI API key')
+
+    try {
+      const client = new OpenAI({ apiKey: this.apiKey })
+      const stream = await client.chat.completions.create({
+        model,
+        messages: messages as any,
+        stream: true,
+        ...(typeof options?.temperature === 'number' ? { temperature: options.temperature } : {}),
+        ...(typeof options?.maxTokens === 'number' ? { max_tokens: options.maxTokens } : {})
+      })
+
+      for await (const chunk of stream) {
+        const content = chunk.choices?.[0]?.delta?.content
+        if (content) {
+          yield { content }
+        }
+      }
+    } catch (err: any) {
+      const code = err?.code || err?.status || err?.response?.status
+      const apiMsg = err?.error?.message || err?.response?.data?.error?.message || err?.message
+      const msg = apiMsg || 'OpenAI stream request failed'
       throw new Error(code ? `${msg} (code: ${code})` : msg)
     }
   }
@@ -46,7 +74,7 @@ export class GeminiProvider extends BaseAIProvider {
 
     try {
       const genAI = new GoogleGenerativeAI(this.apiKey)
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+      const model = genAI.getGenerativeModel({ model: request.model })
 
       const lastMessage = request.messages[request.messages.length - 1]
       if (!lastMessage) throw new Error('No messages provided')
@@ -59,6 +87,36 @@ export class GeminiProvider extends BaseAIProvider {
       return text
     } catch (err: any) {
       const message = err?.message || err?.error?.message || 'Gemini request failed'
+      throw new Error(message)
+    }
+  }
+
+  async *streamChat(messages: ChatMessageAPI[], model: string, options?: { temperature?: number; maxTokens?: number }): AsyncGenerator<StreamChunk> {
+    if (!this.apiKey) throw new Error('Missing Gemini API key')
+
+    try {
+      const genAI = new GoogleGenerativeAI(this.apiKey)
+      const genModel = genAI.getGenerativeModel({ 
+        model,
+        generationConfig: {
+          ...(typeof options?.temperature === 'number' ? { temperature: options.temperature } : {}),
+          ...(typeof options?.maxTokens === 'number' ? { maxOutputTokens: options.maxTokens } : {})
+        }
+      })
+
+      const lastMessage = messages[messages.length - 1]
+      if (!lastMessage) throw new Error('No messages provided')
+
+      const result = await genModel.generateContentStream(lastMessage.content)
+      
+      for await (const chunk of result.stream) {
+        const text = chunk.text()
+        if (text) {
+          yield { content: text }
+        }
+      }
+    } catch (err: any) {
+      const message = err?.message || err?.error?.message || 'Gemini stream request failed'
       throw new Error(message)
     }
   }
@@ -81,7 +139,7 @@ export class DeepseekProvider extends BaseAIProvider {
       })
       
       const resp = await client.chat.completions.create({
-        model: 'deepseek-chat',
+        model: request.model,
         messages: request.messages as any,
         ...(typeof request.temperature === 'number' ? { temperature: request.temperature } : {}),
         ...(typeof request.maxTokens === 'number' ? { max_tokens: request.maxTokens } : {})
@@ -94,6 +152,37 @@ export class DeepseekProvider extends BaseAIProvider {
       const code = err?.code || err?.status || err?.response?.status
       const apiMsg = err?.error?.message || err?.response?.data?.error?.message || err?.message
       const msg = apiMsg || 'DeepSeek request failed'
+      throw new Error(code ? `${msg} (code: ${code})` : msg)
+    }
+  }
+
+  async *streamChat(messages: ChatMessageAPI[], model: string, options?: { temperature?: number; maxTokens?: number }): AsyncGenerator<StreamChunk> {
+    if (!this.apiKey) throw new Error('Missing DeepSeek API key')
+
+    try {
+      const client = new OpenAI({ 
+        apiKey: this.apiKey,
+        baseURL: 'https://api.deepseek.com/v1'
+      })
+      
+      const stream = await client.chat.completions.create({
+        model,
+        messages: messages as any,
+        stream: true,
+        ...(typeof options?.temperature === 'number' ? { temperature: options.temperature } : {}),
+        ...(typeof options?.maxTokens === 'number' ? { max_tokens: options.maxTokens } : {})
+      })
+
+      for await (const chunk of stream) {
+        const content = chunk.choices?.[0]?.delta?.content
+        if (content) {
+          yield { content }
+        }
+      }
+    } catch (err: any) {
+      const code = err?.code || err?.status || err?.response?.status
+      const apiMsg = err?.error?.message || err?.response?.data?.error?.message || err?.message
+      const msg = apiMsg || 'DeepSeek stream request failed'
       throw new Error(code ? `${msg} (code: ${code})` : msg)
     }
   }
