@@ -34,16 +34,40 @@ const isThinking = ref(false)
 const useStreaming = ref(true) // 預設啟用串流
 
 // 核心發送邏輯
-async function sendMessage(text: string) {
+async function sendMessage(text: string, imgUrls: string[] = []) {
   if (!text || loading.value) return
   loading.value = true
   isThinking.value = true
   // 用戶發送訊息時立即滾動到底部
   scrollToBottom()
   
+  // 準備訊息內容
+  let messageContent: string | Array<any>
+  
+  if (imgUrls.length === 0) {
+    // 只有文字
+    messageContent = text
+  } else {
+    // 文字 + 圖片
+    messageContent = [
+      { type: 'text', text: text }
+    ]
+    
+    // 添加圖片
+    for (const imgUrl of imgUrls) {
+      messageContent.push({
+        type: 'image_url',
+        image_url: {
+          url: imgUrl,
+          detail: 'auto'
+        }
+      })
+    }
+  }
+  
   if (useStreaming.value) {
     // 使用串流模式
-    const result = await store.sendStream(props.provider.type, text, selectedModel.value, () => {
+    const result = await store.sendStream(props.provider.type, messageContent, selectedModel.value, () => {
       if (isThinking.value) isThinking.value = false
     })
     if (result?.message && result?.content) {
@@ -52,7 +76,7 @@ async function sendMessage(text: string) {
     }
   } else {
     // 使用傳統模式
-    const result = await store.send(props.provider.type, text, selectedModel.value)
+    const result = await store.send(props.provider.type, messageContent, selectedModel.value)
     isThinking.value = false
     if (result?.message && result?.content) {
       // 使用串流顯示回應（word 模式保留空白與縮排）
@@ -61,6 +85,7 @@ async function sendMessage(text: string) {
   }
   loading.value = false
 }
+
 
 // 外部調用的 send 方法（由父元件使用）
 async function sendExternal(externalText: string) {
@@ -92,8 +117,22 @@ defineExpose({
     </div>
     <div ref="listEl" class="chat__list">
       <div v-for="m in messages" :key="m.id" class="msg" :class="m.role">
-        <div class="bubble">
-          <CodeMarkdown :content="m.content" />
+        <!-- 顯示圖片（如果是多媒體內容） -->
+        <div v-if="Array.isArray(m.content)" class="message-images">
+          <div 
+            v-for="(item, index) in m.content.filter(c => c.type === 'image_url')" 
+            :key="index"
+            class="message-image"
+          >
+            <img :src="item.image_url?.url" :alt="`圖片 ${index + 1}`" />
+          </div>
+        </div>
+        
+        <!-- 顯示文字內容（在圖片下方） -->
+        <div v-if="Array.isArray(m.content) ? m.content.find(c => c.type === 'text')?.text : m.content" class="bubble">
+          <CodeMarkdown 
+            :content="Array.isArray(m.content) ? m.content.find(c => c.type === 'text')?.text || '' : m.content" 
+          />
         </div>
       </div>
       <div v-if="!messages.length" class="placeholder">輸入訊息開始對話</div>
@@ -113,7 +152,7 @@ defineExpose({
     <div class="chat__input">
       <ChatInput
         :placeholder="'詢問任何問題'"
-        :send="async (text: string) => await sendMessage(text)"
+        :send="async (text: string, imgUrls: string[]) => await sendMessage(text, imgUrls)"
         sendLabel="送出"
         :loading="loading"
       />
@@ -173,6 +212,43 @@ defineExpose({
     background: #1e3a5f;
     border-color: #4a7c9d;
     color: #87ceeb;
+  }
+}
+
+// ===== 圖片顯示樣式 =====
+.message-images {
+  display: flex;
+  flex-direction: row-reverse; // 反向排列，讓圖片從右邊開始
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 0 12px; // 與 bubble 對齊
+  overflow-x: auto; // 如果圖片太多，可以水平滾動
+  scrollbar-width: none; // 隱藏滾動條
+  -ms-overflow-style: none;
+  width: 100%; // 確保有足夠寬度
+  max-width: 100%; // 限制最大寬度
+  align-self: flex-end; // 與父容器的 align-items: flex-end 一致
+  
+  &::-webkit-scrollbar {
+    display: none; // 隱藏滾動條
+  }
+}
+
+.message-image {
+  min-width: 120px; // 最小寬度
+  max-width: 200px;
+  width: 120px; // 固定寬度
+  height: 120px; // 固定高度，保持正方形
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0; // 防止被壓縮
+  
+  img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover; // 保持比例並填滿容器
+    border-radius: 8px;
   }
 }
 
@@ -286,6 +362,8 @@ defineExpose({
 
 .msg {
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   margin: 6px 0;
 
   &.user {

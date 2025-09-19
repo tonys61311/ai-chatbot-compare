@@ -55,18 +55,18 @@ export const useChatStore = defineStore('chat', {
       this.ensureProvider(provider)
       this.byProvider[provider]!.messages.splice(0)
     },
-    async send(provider: AIProviderType, prompt: string, model: string, opts?: { delayMs?: number; mode?: 'auto' | 'word' | 'char'; onProgress?: () => void }) {
+    async send(provider: AIProviderType, content: string | Array<any>, model: string, opts?: { delayMs?: number; mode?: 'auto' | 'word' | 'char'; onProgress?: () => void }) {
       this.ensureProvider(provider)
       const bucket = this.byProvider[provider]!
       if (bucket.loading) return
       bucket.loading = true
 
-      const userMsg: ChatMessage = { id: generateId(), role: 'user', content: prompt }
+      const userMsg: ChatMessage = { id: generateId(), role: 'user', content }
       bucket.messages.push(userMsg)
 
       try {
         const chats: ModelChat[] = [
-          { provider, messages: [{ role: 'user', content: prompt }], model }
+          { provider, messages: [{ role: 'user', content }], model }
         ]
         const results: ChatResult[] = await apiClient.chatBatch(chats)
         const item = results[0]
@@ -87,14 +87,14 @@ export const useChatStore = defineStore('chat', {
       }
     },
     // 幫我多一個callback，因位我前面有宜個isThinking，所以我要在第一次收到資料時，呼叫callback 更新外面isThinking ref = false (幫我命名) 
-    async sendStream(provider: AIProviderType, prompt: string, model: string, isThinkingCallback: () => void = () => {}): Promise<{ message: ChatMessage; content: string } | undefined> {
+    async sendStream(provider: AIProviderType, content: string | Array<any>, model: string, isThinkingCallback: () => void = () => {}): Promise<{ message: ChatMessage; content: string } | undefined> {
       this.ensureProvider(provider)
       const bucket = this.byProvider[provider]!
       if (bucket.streaming) return
 
       bucket.streaming = true
 
-      const userMsg: ChatMessage = { id: generateId(), role: 'user', content: prompt }
+      const userMsg: ChatMessage = { id: generateId(), role: 'user', content }
       bucket.messages.push(userMsg)
 
       const assistantMsg: ChatMessage = reactive({ id: generateId(), role: 'assistant', content: '' }) as ChatMessage
@@ -103,7 +103,7 @@ export const useChatStore = defineStore('chat', {
       try {
         const request: ChatStreamRequest = {
           provider,
-          messages: [{ role: 'user', content: prompt }],
+          messages: [{ role: 'user', content }],
           model
         }
 
@@ -116,7 +116,7 @@ export const useChatStore = defineStore('chat', {
           }
         })
 
-        return { message: assistantMsg, content: assistantMsg.content }
+        return { message: assistantMsg, content: typeof assistantMsg.content === 'string' ? assistantMsg.content : '' }
       } catch (e: any) {
         const errText = `錯誤：${e?.message || 'Unknown error'}`
         assistantMsg.content = errText

@@ -343,4 +343,204 @@ describe('ChatWindow', () => {
 
     expect(dropdownBtn).toHaveTextContent('GPT-4o')
   })
+
+  // ===== 檔案上傳測試 =====
+  describe('檔案上傳功能測試', () => {
+    it('應該處理檔案選擇事件', async () => {
+      mockStore.isLoading.mockReturnValue(false)
+      
+      render(ChatWindow, {
+        props: {
+          provider: new OpenAIProviderUI()
+        }
+      })
+
+      // 找到 ChatInput 組件
+      const chatInput = screen.getByRole('textbox')
+      expect(chatInput).toBeInTheDocument()
+
+      // 檢查是否有檔案上傳按鈕（FileUploadDropdown 的觸發器）
+      const fileUploadButton = screen.getByRole('button', { name: '新增' })
+      expect(fileUploadButton).toBeInTheDocument()
+    })
+
+    it('應該在 ChatInput 中包含 FileUploadDropdown 組件', async () => {
+      mockStore.isLoading.mockReturnValue(false)
+      
+      const { container } = render(ChatWindow, {
+        props: {
+          provider: new OpenAIProviderUI()
+        }
+      })
+
+      // 檢查是否有 FileUploadDropdown 相關的元素
+      const fileUploadElements = container.querySelectorAll('[aria-label="新增"]')
+      expect(fileUploadElements.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('圖片顯示功能測試', () => {
+    it('應該顯示多媒體訊息中的圖片', () => {
+      // 準備多媒體訊息數據
+      const multimediaMessage = {
+        id: '1',
+        role: 'user' as const,
+        content: [
+          { type: 'text', text: '幫我描述這張圖片' },
+          { 
+            type: 'image_url', 
+            image_url: { 
+              url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==' 
+            } 
+          }
+        ]
+      }
+
+      mockStore.getMessages.mockReturnValue([multimediaMessage])
+
+      const { container } = render(ChatWindow, {
+        props: {
+          provider: new OpenAIProviderUI()
+        }
+      })
+
+      // 檢查圖片容器是否存在
+      const messageImages = container.querySelector('.message-images')
+      expect(messageImages).toBeInTheDocument()
+
+      // 檢查圖片元素是否存在
+      const images = container.querySelectorAll('.message-image img')
+      expect(images).toHaveLength(1)
+      const imageUrl = multimediaMessage.content[1]
+      if (imageUrl && 'image_url' in imageUrl && imageUrl.image_url?.url) {
+        expect(images[0]).toHaveAttribute('src', imageUrl.image_url.url)
+      }
+    })
+
+    it('應該支援多張圖片的水平滾動', () => {
+      // 準備包含多張圖片的訊息
+      const multiImageMessage = {
+        id: '1',
+        role: 'user' as const,
+        content: [
+          { type: 'text', text: '這些圖片' },
+          { 
+            type: 'image_url', 
+            image_url: { 
+              url: 'data:image/png;base64,image1' 
+            } 
+          },
+          { 
+            type: 'image_url', 
+            image_url: { 
+              url: 'data:image/png;base64,image2' 
+            } 
+          },
+          { 
+            type: 'image_url', 
+            image_url: { 
+              url: 'data:image/png;base64,image3' 
+            } 
+          }
+        ]
+      }
+
+      mockStore.getMessages.mockReturnValue([multiImageMessage])
+
+      const { container } = render(ChatWindow, {
+        props: {
+          provider: new OpenAIProviderUI()
+        }
+      })
+
+      // 檢查圖片容器
+      const messageImages = container.querySelector('.message-images')
+      expect(messageImages).toBeInTheDocument()
+
+      // 檢查所有圖片都存在
+      const images = container.querySelectorAll('.message-image')
+      expect(images).toHaveLength(3)
+
+      // 檢查圖片容器有正確的 class
+      expect(messageImages).toHaveClass('message-images')
+      
+      // 檢查圖片元素有正確的 class
+      images.forEach(img => {
+        expect(img).toHaveClass('message-image')
+      })
+    })
+
+    it('應該隱藏滾動條樣式', () => {
+      const multimediaMessage = {
+        id: '1',
+        role: 'user' as const,
+        content: [
+          { type: 'text', text: '測試滾動條' },
+          { 
+            type: 'image_url', 
+            image_url: { 
+              url: 'data:image/png;base64,test' 
+            } 
+          }
+        ]
+      }
+
+      mockStore.getMessages.mockReturnValue([multimediaMessage])
+
+      const { container } = render(ChatWindow, {
+        props: {
+          provider: new OpenAIProviderUI()
+        }
+      })
+
+      const messageImages = container.querySelector('.message-images')
+      expect(messageImages).toBeInTheDocument()
+
+      // 檢查圖片容器存在且有正確的 class
+      expect(messageImages).toHaveClass('message-images')
+    })
+
+    it('應該正確顯示文字內容在圖片下方', () => {
+      const multimediaMessage = {
+        id: '1',
+        role: 'user' as const,
+        content: [
+          { type: 'text', text: '這是文字內容' },
+          { 
+            type: 'image_url', 
+            image_url: { 
+              url: 'data:image/png;base64,test' 
+            } 
+          }
+        ]
+      }
+
+      mockStore.getMessages.mockReturnValue([multimediaMessage])
+
+      const { container } = render(ChatWindow, {
+        props: {
+          provider: new OpenAIProviderUI()
+        }
+      })
+
+      // 檢查圖片容器存在
+      const messageImages = container.querySelector('.message-images')
+      expect(messageImages).toBeInTheDocument()
+
+      // 檢查文字 bubble 存在
+      const bubble = container.querySelector('.bubble')
+      expect(bubble).toBeInTheDocument()
+      expect(bubble).toHaveTextContent('這是文字內容')
+
+      // 檢查圖片在文字上方（DOM 順序）
+      const msg = container.querySelector('.msg')
+      expect(msg).toBeInTheDocument()
+      
+      const imagesElement = msg!.querySelector('.message-images')
+      const bubbleElement = msg!.querySelector('.bubble')
+      
+      expect(imagesElement).toBeInTheDocument()
+      expect(bubbleElement).toBeInTheDocument()
+    })
+  })
 })

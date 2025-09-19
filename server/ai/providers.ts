@@ -16,9 +16,33 @@ export class OpenAIProvider extends BaseAIProvider {
 
     try {
       const client = new OpenAI({ apiKey: this.apiKey })
+      
+      // 處理多媒體內容
+      const processedMessages = request.messages.map(msg => {
+        if (typeof msg.content === 'string') {
+          return { role: msg.role, content: msg.content }
+        }
+        
+        // 處理多媒體內容
+        return {
+          role: msg.role,
+          content: msg.content.map(item => {
+            if (item.type === 'text') {
+              return { type: 'text', text: item.text }
+            } else if (item.type === 'image_url') {
+              return {
+                type: 'image_url',
+                image_url: { url: item.image_url?.url }
+              }
+            }
+            return item
+          })
+        }
+      })
+      
       const resp = await client.chat.completions.create({
         model: request.model,
-        messages: request.messages as any,
+        messages: processedMessages as any,
         ...(typeof request.temperature === 'number' ? { temperature: request.temperature } : {}),
         ...(typeof request.maxTokens === 'number' ? { max_tokens: request.maxTokens } : {})
       })
@@ -39,9 +63,33 @@ export class OpenAIProvider extends BaseAIProvider {
 
     try {
       const client = new OpenAI({ apiKey: this.apiKey })
+      
+      // 處理多媒體內容
+      const processedMessages = messages.map(msg => {
+        if (typeof msg.content === 'string') {
+          return { role: msg.role, content: msg.content }
+        }
+        
+        // 處理多媒體內容
+        return {
+          role: msg.role,
+          content: msg.content.map(item => {
+            if (item.type === 'text') {
+              return { type: 'text', text: item.text }
+            } else if (item.type === 'image_url') {
+              return {
+                type: 'image_url',
+                image_url: { url: item.image_url?.url }
+              }
+            }
+            return item
+          })
+        }
+      })
+      
       const stream = await client.chat.completions.create({
         model,
-        messages: messages as any,
+        messages: processedMessages as any,
         stream: true,
         ...(typeof options?.temperature === 'number' ? { temperature: options.temperature } : {}),
         ...(typeof options?.maxTokens === 'number' ? { max_tokens: options.maxTokens } : {})
@@ -79,7 +127,34 @@ export class GeminiProvider extends BaseAIProvider {
       const lastMessage = request.messages[request.messages.length - 1]
       if (!lastMessage) throw new Error('No messages provided')
 
-      const result = await model.generateContent(lastMessage.content)
+      // 處理多媒體內容
+      let content
+      if (typeof lastMessage.content === 'string') {
+        content = lastMessage.content
+      } else {
+        // 轉換為 Gemini 格式
+        const parts = []
+        for (const item of lastMessage.content) {
+          if (item.type === 'text' && item.text) {
+            parts.push({ text: item.text })
+          } else if (item.type === 'image_url') {
+            // 從 data URL 中提取 base64 和 mime type
+            const dataUrl = item.image_url?.url || ''
+            const [header, base64Data] = dataUrl.split(',')
+            const mimeType = header.match(/data:([^;]+)/)?.[1] || 'image/jpeg'
+            
+            parts.push({
+              inlineData: {
+                mimeType,
+                data: base64Data
+              }
+            })
+          }
+        }
+        content = parts
+      }
+
+      const result = await model.generateContent(content)
       const response = await result.response
       const text = response.text()
 
@@ -107,7 +182,34 @@ export class GeminiProvider extends BaseAIProvider {
       const lastMessage = messages[messages.length - 1]
       if (!lastMessage) throw new Error('No messages provided')
 
-      const result = await genModel.generateContentStream(lastMessage.content)
+      // 處理多媒體內容
+      let content
+      if (typeof lastMessage.content === 'string') {
+        content = lastMessage.content
+      } else {
+        // 轉換為 Gemini 格式
+        const parts = []
+        for (const item of lastMessage.content) {
+          if (item.type === 'text' && item.text) {
+            parts.push({ text: item.text })
+          } else if (item.type === 'image_url') {
+            // 從 data URL 中提取 base64 和 mime type
+            const dataUrl = item.image_url?.url || ''
+            const [header, base64Data] = dataUrl.split(',')
+            const mimeType = header.match(/data:([^;]+)/)?.[1] || 'image/jpeg'
+            
+            parts.push({
+              inlineData: {
+                mimeType,
+                data: base64Data
+              }
+            })
+          }
+        }
+        content = parts
+      }
+
+      const result = await genModel.generateContentStream(content)
       
       for await (const chunk of result.stream) {
         const text = chunk.text()
@@ -138,9 +240,32 @@ export class DeepseekProvider extends BaseAIProvider {
         baseURL: 'https://api.deepseek.com/v1'
       })
       
+      // 處理多媒體內容
+      const processedMessages = request.messages.map(msg => {
+        if (typeof msg.content === 'string') {
+          return { role: msg.role, content: msg.content }
+        }
+        
+        // 處理多媒體內容
+        return {
+          role: msg.role,
+          content: msg.content.map(item => {
+            if (item.type === 'text') {
+              return { type: 'text', text: item.text }
+            } else if (item.type === 'image_url') {
+              return {
+                type: 'image_url',
+                image_url: { url: item.image_url?.url }
+              }
+            }
+            return item
+          })
+        }
+      })
+      
       const resp = await client.chat.completions.create({
         model: request.model,
-        messages: request.messages as any,
+        messages: processedMessages as any,
         ...(typeof request.temperature === 'number' ? { temperature: request.temperature } : {}),
         ...(typeof request.maxTokens === 'number' ? { max_tokens: request.maxTokens } : {})
       })
@@ -165,9 +290,32 @@ export class DeepseekProvider extends BaseAIProvider {
         baseURL: 'https://api.deepseek.com/v1'
       })
       
+      // 處理多媒體內容
+      const processedMessages = messages.map(msg => {
+        if (typeof msg.content === 'string') {
+          return { role: msg.role, content: msg.content }
+        }
+        
+        // 處理多媒體內容
+        return {
+          role: msg.role,
+          content: msg.content.map(item => {
+            if (item.type === 'text') {
+              return { type: 'text', text: item.text }
+            } else if (item.type === 'image_url') {
+              return {
+                type: 'image_url',
+                image_url: { url: item.image_url?.url }
+              }
+            }
+            return item
+          })
+        }
+      })
+      
       const stream = await client.chat.completions.create({
         model,
-        messages: messages as any,
+        messages: processedMessages as any,
         stream: true,
         ...(typeof options?.temperature === 'number' ? { temperature: options.temperature } : {}),
         ...(typeof options?.maxTokens === 'number' ? { max_tokens: options.maxTokens } : {})

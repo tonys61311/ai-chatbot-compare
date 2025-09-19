@@ -6,7 +6,14 @@ export type ChatBatchResponse = ApiDataResponse<ChatResult[]>
 // API 相關類型（前後端共用）
 export interface ChatMessageAPI {
   role: 'system' | 'user' | 'assistant'
-  content: string
+  content: string | Array<{
+    type: 'text' | 'image_url'
+    text?: string
+    image_url?: {
+      url: string
+      detail?: 'low' | 'high' | 'auto'
+    }
+  }>
 }
 
 // 前端本地訊息型別（帶 id，且不含 system 角色）

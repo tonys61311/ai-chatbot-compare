@@ -19,7 +19,7 @@ describe('ChatInput', () => {
     })
     await wrapper.find('textarea').setValue('hello')
     await wrapper.find('textarea').trigger('keydown', { key: 'Enter' })
-    expect(send).toHaveBeenCalledWith('hello')
+    expect(send).toHaveBeenCalledWith('hello', [])
   })
 
   it('send callback 支援 async/await', async () => {
@@ -35,7 +35,7 @@ describe('ChatInput', () => {
     await wrapper.find('textarea').trigger('keydown', { key: 'Enter' })
     
     // 檢查 send 被調用
-    expect(send).toHaveBeenCalledWith('async test')
+    expect(send).toHaveBeenCalledWith('async test', [])
     
     // 等待異步操作完成
     await waitFor(() => {
@@ -98,7 +98,7 @@ describe('ChatInput', () => {
       await textarea.trigger('keydown', { key: 'Enter' })
       
       // 應該發送完整文字
-      expect(send).toHaveBeenCalledWith('你好')
+      expect(send).toHaveBeenCalledWith('你好', [])
     })
 
     it('混合中英文輸入應該正確處理', async () => {
@@ -123,7 +123,7 @@ describe('ChatInput', () => {
       await textarea.trigger('keydown', { key: 'Enter' })
       
       // 應該發送完整文字
-      expect(send).toHaveBeenCalledWith('hello你好')
+      expect(send).toHaveBeenCalledWith('hello你好', [])
     })
 
     it('Shift+Enter 應該換行而不發送', async () => {
@@ -272,7 +272,7 @@ describe('ChatInput', () => {
       await wrapper.find('[aria-label="送出"]').trigger('click')
       
       // 應該發送
-      expect(send).toHaveBeenCalledWith('hello')
+      expect(send).toHaveBeenCalledWith('hello', [])
     })
 
     it('loading 狀態下按鈕應該顯示 loading 圖標', () => {
@@ -293,6 +293,72 @@ describe('ChatInput', () => {
       
       const button = wrapper.find('[aria-label="送出"]')
       expect(button.attributes('disabled')).toBeDefined()
+    })
+  })
+
+  // ===== 檔案上傳測試 =====
+  describe('檔案上傳功能測試', () => {
+    it('應該渲染 FileUploadDropdown 組件', () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send }
+      })
+      
+      const fileUploadDropdown = wrapper.findComponent({ name: 'FileUploadDropdown' })
+      expect(fileUploadDropdown.exists()).toBe(true)
+      expect(fileUploadDropdown.props('icon')).toBe('mdi:plus')
+      expect(fileUploadDropdown.props('size')).toBe(30)
+      expect(fileUploadDropdown.props('ariaLabel')).toBe('新增')
+    })
+
+    it('檔案選擇時應該觸發 file-selected 事件', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send }
+      })
+      
+      const mockFiles = {
+        length: 2,
+        0: { name: 'test1.jpg' },
+        1: { name: 'test2.png' }
+      } as unknown as FileList
+      
+      // 通過 FileUploadDropdown 組件觸發檔案選擇事件
+      const fileUploadDropdown = wrapper.findComponent({ name: 'FileUploadDropdown' })
+      await fileUploadDropdown.vm.$emit('file-selected', mockFiles)
+      
+      // 檢查是否觸發了 file-selected 事件
+      expect(wrapper.emitted('file-selected')).toBeTruthy()
+      expect(wrapper.emitted('file-selected')?.[0]).toEqual([mockFiles])
+    })
+
+    it('FileUploadDropdown 應該正確傳遞 props', () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send }
+      })
+      
+      const fileUploadDropdown = wrapper.findComponent({ name: 'FileUploadDropdown' })
+      expect(fileUploadDropdown.props()).toMatchObject({
+        icon: 'mdi:plus',
+        size: 30,
+        ariaLabel: '新增'
+      })
+    })
+  })
+
+  describe('語音按鈕測試', () => {
+    it('語音按鈕應該被隱藏', () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send }
+      })
+      
+      // 檢查語音按鈕不存在
+      const microphoneButtons = wrapper.findAllComponents({ name: 'IconButton' }).filter(btn => 
+        btn.props('icon') === 'mdi:microphone'
+      )
+      expect(microphoneButtons).toHaveLength(0)
     })
   })
 })
