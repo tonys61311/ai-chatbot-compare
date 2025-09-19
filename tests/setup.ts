@@ -19,6 +19,12 @@ global.useAutoScroll = vi.fn(() => ({
 // Mock ref function
 global.ref = vi.fn((val) => ({ value: val }))
 
+// Mock URL.createObjectURL for FilePreview component
+global.URL = {
+  createObjectURL: vi.fn((file) => `blob:mock-url-${file.name}`),
+  revokeObjectURL: vi.fn()
+} as any
+
 // Mock Nuxt useRuntimeConfig for server-side modules during tests
 global.useRuntimeConfig = vi.fn(() => ({
   openaiKey: '',

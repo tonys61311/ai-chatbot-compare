@@ -16,6 +16,7 @@ export type ProviderModel = {
   label: string
   default?: boolean
   limits?: { maxTokens?: number }
+  supportsImages?: boolean
 }
 
 export type ProviderModels = {

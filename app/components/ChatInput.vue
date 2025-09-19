@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { ref, nextTick, computed } from 'vue'
+import { ref, nextTick, computed, watch } from 'vue'
 import IconButton from '@/components/common/IconButton.vue'
 import FileUploadDropdown from '@/components/common/FileUploadDropdown.vue'
 import FilePreview from '@/components/common/FilePreview.vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
     placeholder?: string
     send: (text: string, imgUrls: string[]) => Promise<any> | any
     sendLabel?: string
     loading?: boolean //loading若外面沒給則用裡面loading判斷
     modelValue?: string // 外部 v-model 綁定
-}>()
+    supportsImages?: boolean // 是否支援圖片
+}>(), {
+    supportsImages: false
+})
 
 const emit = defineEmits<{
     'update:modelValue': [value: string]
@@ -35,6 +38,13 @@ const selectedFiles = ref<File[]>([]) // 新增：追蹤選中的檔案
 
 // loading 若外面沒給 (有給的話會是 boolean) 則用內部 selfLoading
 const isLoading = computed(() => typeof props.loading === 'boolean' ? props.loading : selfLoading.value)
+
+// 監聽 supportsImages 變化，當不支援圖片時清空 selectedFiles
+watch(() => props.supportsImages, (newValue) => {
+  if (newValue === false) {
+    selectedFiles.value = []
+  }
+}, { immediate: true })
 
 async function handleSend() {
     const text = input.value.trim()
@@ -134,6 +144,7 @@ function fileToBase64(file: File): Promise<string> {
         <!-- 輸入區域 -->
         <div class="composer">
             <FileUploadDropdown 
+                v-if="supportsImages"
                 icon="mdi:plus" 
                 :size="30" 
                 aria-label="新增" 

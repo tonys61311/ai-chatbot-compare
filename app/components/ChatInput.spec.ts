@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { waitFor } from '@testing-library/vue'
 import ChatInput from './ChatInput.vue'
+import type { ProviderModel } from '@/types/ai'
 
 describe('ChatInput', () => {
   it('應顯示 placeholder', () => {
@@ -301,7 +302,7 @@ describe('ChatInput', () => {
     it('應該渲染 FileUploadDropdown 組件', () => {
       const send = vi.fn()
       const wrapper = mount(ChatInput, {
-        props: { send }
+        props: { send, supportsImages: true }
       })
       
       const fileUploadDropdown = wrapper.findComponent({ name: 'FileUploadDropdown' })
@@ -314,7 +315,7 @@ describe('ChatInput', () => {
     it('檔案選擇時應該觸發 file-selected 事件', async () => {
       const send = vi.fn()
       const wrapper = mount(ChatInput, {
-        props: { send }
+        props: { send, supportsImages: true }
       })
       
       const mockFiles = {
@@ -335,7 +336,7 @@ describe('ChatInput', () => {
     it('FileUploadDropdown 應該正確傳遞 props', () => {
       const send = vi.fn()
       const wrapper = mount(ChatInput, {
-        props: { send }
+        props: { send, supportsImages: true }
       })
       
       const fileUploadDropdown = wrapper.findComponent({ name: 'FileUploadDropdown' })
@@ -359,6 +360,60 @@ describe('ChatInput', () => {
         btn.props('icon') === 'mdi:microphone'
       )
       expect(microphoneButtons).toHaveLength(0)
+    })
+  })
+
+  describe('圖片支援測試', () => {
+    it('當支援圖片時，應顯示 FileUploadDropdown', () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send, supportsImages: true }
+      })
+      
+      expect(wrapper.findComponent({ name: 'FileUploadDropdown' }).exists()).toBe(true)
+    })
+
+    it('當不支援圖片時，應隱藏 FileUploadDropdown', () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send, supportsImages: false }
+      })
+      
+      expect(wrapper.findComponent({ name: 'FileUploadDropdown' }).exists()).toBe(false)
+    })
+
+    it('當不支援圖片時，應清空 selectedFiles', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send, supportsImages: true }
+      })
+      
+      // 先模擬有選中的檔案
+      const vm = wrapper.vm as any
+      vm.selectedFiles = [new File(['test'], 'test.jpg', { type: 'image/jpeg' })]
+      expect(vm.selectedFiles).toHaveLength(1)
+      
+      // 然後切換到不支援圖片
+      await wrapper.setProps({ supportsImages: false })
+      
+      // 當不支援圖片時，selectedFiles 應該被清空
+      expect(vm.selectedFiles).toHaveLength(0)
+    })
+
+    it('當支援圖片時，應保留 selectedFiles', async () => {
+      const send = vi.fn()
+      const wrapper = mount(ChatInput, {
+        props: { send, supportsImages: true }
+      })
+      
+      // 模擬有選中的檔案
+      const vm = wrapper.vm as any
+      const testFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+      vm.selectedFiles = [testFile]
+      
+      // 當支援圖片時，selectedFiles 應該被保留
+      expect(vm.selectedFiles).toHaveLength(1)
+      expect(vm.selectedFiles[0]).toBe(testFile)
     })
   })
 })

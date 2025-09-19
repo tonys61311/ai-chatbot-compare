@@ -25,6 +25,13 @@ onMounted(() => {
   }
 })
 
+// 判斷當前模型是否支援圖片
+const supportsImages = computed(() => {
+  const models = store.getModels(props.provider.type)
+  if (!models.length) return false
+  
+  return models.find(m => m.id === selectedModel.value)?.supportsImages ?? false
+})
 // 使用滾動 composable
 const { listEl, scrollToBottom, streamToMessage } = useAutoScroll()
 
@@ -44,11 +51,14 @@ async function sendMessage(text: string, imgUrls: string[] = []) {
   // 準備訊息內容
   let messageContent: string | Array<any>
   
-  if (imgUrls.length === 0) {
-    // 只有文字
+  // 檢查是否支援圖片且確實有圖片
+  const shouldIncludeImages = supportsImages.value && imgUrls.length > 0
+  console.log('shouldIncludeImages', shouldIncludeImages)
+  if (!shouldIncludeImages) {
+    // 只有文字（不支援圖片或沒有圖片）
     messageContent = text
   } else {
-    // 文字 + 圖片
+    // 文字 + 圖片（支援圖片且有圖片）
     messageContent = [
       { type: 'text', text: text }
     ]
@@ -88,8 +98,8 @@ async function sendMessage(text: string, imgUrls: string[] = []) {
 
 
 // 外部調用的 send 方法（由父元件使用）
-async function sendExternal(externalText: string) {
-  await sendMessage(externalText)
+async function sendExternal(externalText: string, imgUrls: string[] = []) {
+  await sendMessage(externalText, imgUrls)
 }
 
 // 暴露 sendExternal 方法給父元件使用
@@ -155,6 +165,7 @@ defineExpose({
         :send="async (text: string, imgUrls: string[]) => await sendMessage(text, imgUrls)"
         sendLabel="送出"
         :loading="loading"
+        :supportsImages="supportsImages"
       />
     </div>
   </div>

@@ -15,8 +15,8 @@ const mockStore = {
   send: vi.fn().mockResolvedValue({ message: { id: '1', role: 'assistant', content: 'Hello' }, content: 'Hello' }) as any,
   sendStream: vi.fn().mockResolvedValue({ message: { id: '1', role: 'assistant', content: 'Hello' }, content: 'Hello' }) as any,
   getModels: vi.fn(() => [
-    { id: 'gpt-4o-mini', label: 'GPT-4o mini', default: true },
-    { id: 'gpt-4o', label: 'GPT-4o', default: false }
+    { id: 'gpt-4o-mini', label: 'GPT-4o mini', default: true, supportsImages: true },
+    { id: 'gpt-4o', label: 'GPT-4o', default: false, supportsImages: true }
   ]) as any,
   loadModels: vi.fn() as any
 }
@@ -271,7 +271,8 @@ describe('ChatWindow', () => {
     })
 
     expect(screen.getByRole('button', { name: '新增' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '語音' })).toBeInTheDocument()
+    // 語音按鈕已被隱藏，所以不應該存在
+    expect(screen.queryByRole('button', { name: '語音' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '送出' })).toBeInTheDocument()
     expect(screen.getByRole('textbox')).toBeInTheDocument()
   })
@@ -346,26 +347,13 @@ describe('ChatWindow', () => {
 
   // ===== 檔案上傳測試 =====
   describe('檔案上傳功能測試', () => {
-    it('應該處理檔案選擇事件', async () => {
-      mockStore.isLoading.mockReturnValue(false)
-      
-      render(ChatWindow, {
-        props: {
-          provider: new OpenAIProviderUI()
-        }
-      })
+    // 注意：FileUploadDropdown 顯示測試已在 ChatInput.spec.ts 中涵蓋
 
-      // 找到 ChatInput 組件
-      const chatInput = screen.getByRole('textbox')
-      expect(chatInput).toBeInTheDocument()
-
-      // 檢查是否有檔案上傳按鈕（FileUploadDropdown 的觸發器）
-      const fileUploadButton = screen.getByRole('button', { name: '新增' })
-      expect(fileUploadButton).toBeInTheDocument()
-    })
-
-    it('應該在 ChatInput 中包含 FileUploadDropdown 組件', async () => {
-      mockStore.isLoading.mockReturnValue(false)
+    it('當模型不支援圖片時，應該隱藏 FileUploadDropdown', async () => {
+      // 設置不支援圖片的模型
+      mockStore.getModels.mockReturnValue([
+        { id: 'deepseek-chat', label: 'DeepSeek Chat', default: true, supportsImages: false }
+      ])
       
       const { container } = render(ChatWindow, {
         props: {
@@ -373,9 +361,11 @@ describe('ChatWindow', () => {
         }
       })
 
-      // 檢查是否有 FileUploadDropdown 相關的元素
-      const fileUploadElements = container.querySelectorAll('[aria-label="新增"]')
-      expect(fileUploadElements.length).toBeGreaterThan(0)
+      // 等待組件渲染完成
+      await waitFor(() => {
+        const fileUploadElements = container.querySelectorAll('[aria-label="新增"]')
+        expect(fileUploadElements.length).toBe(0)
+      })
     })
   })
 

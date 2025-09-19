@@ -10,21 +10,19 @@ const store = useChatStore()
 const modelsLoaded = computed(() => store.isModelsLoaded)
 
 // 統一輸入框
-const globalInput = ref('')
-const chatWindowRefs = ref<Array<{ send: (text: string) => void } | null>>([])
+const chatWindowRefs = ref<Array<{ send: (text: string, imgUrls: string[]) => void } | null>>([])
 
 onMounted(async () => {
   await store.initData()
 })
 
 // 統一發送訊息到所有子元件
-async function sendToAll(text?: string) {
-  const msg = (typeof text === 'string' ? text : globalInput.value).trim()
+function sendToAll(text: string, imgUrls: string[]) {
+  const msg = text.trim()
   if (!msg) return
-  globalInput.value = ''
   chatWindowRefs.value.forEach(chatWindow => {
     if (chatWindow && chatWindow.send) {
-      chatWindow.send(msg)
+      chatWindow.send(msg, imgUrls || [])
     }
   })
 }
@@ -47,8 +45,9 @@ async function sendToAll(text?: string) {
     <!-- 統一 GlobalInput 元件 -->
     <ChatInput
       :placeholder="'輸入訊息同時發送給所有 AI...'"
-      :send="async (text: string) => { await sendToAll(text) }"
+      :send="sendToAll"
       sendLabel="發送"
+      :supportsImages="true"
     />
   </div>
 </template>
