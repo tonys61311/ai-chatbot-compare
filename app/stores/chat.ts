@@ -17,16 +17,20 @@ interface ChatState {
   byProvider: Partial<Record<AIProviderType, ProviderChatState>>
   models: Partial<Record<AIProviderType, ProviderModel[]>>
   modelsLoaded: boolean
+  usage: { used: number; limit: number }
 }
 
 export const useChatStore = defineStore('chat', {
   state: (): ChatState => ({
     byProvider: {},
     models: {},
-    modelsLoaded: false
+    modelsLoaded: false,
+    usage: { used: 0, limit: 0 }
   }),
   getters: {
     isModelsLoaded: (state) => state.modelsLoaded,
+    getUsage: (state) => state.usage,
+    isUsageExceeded: (state) => state.usage.limit > 0 && state.usage.used >= state.usage.limit,
     getMessages: (state) => (provider: AIProviderType): ChatMessage[] => {
       return state.byProvider[provider]?.messages || []
     },
@@ -45,6 +49,13 @@ export const useChatStore = defineStore('chat', {
     async initData() {
       await this.loadModels()
       this.modelsLoaded = true
+      const { used, limit } = await apiClient.getUsage()
+        this.usage.used = used
+        this.usage.limit = limit
+        if (this.usage.limit > 0 && this.usage.used >= this.usage.limit) {
+          const modal = useModal()
+          modal.alert('已達使用上限，請稍後再試。', '用量超過', 'danger')
+        }
     },
     ensureProvider(provider: AIProviderType) {
       if (!this.byProvider[provider]) {
@@ -113,6 +124,10 @@ export const useChatStore = defineStore('chat', {
             assistantMsg.content += chunk.content
           } else if (chunk.type === 'error' && chunk.error) {
             assistantMsg.content = `錯誤：${chunk.error}`
+          } else if (chunk.type === 'done' && chunk.usage) {
+            const usage = chunk.usage
+            this.usage.used = usage.used
+            this.usage.limit = usage.limit
           }
         })
 

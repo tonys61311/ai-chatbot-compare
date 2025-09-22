@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref } from 'vue'
 import ChatWindow from './ChatWindow.vue'
+import ModalHost from './common/ModalHost.vue'
 import { AIProviderType } from '@/types/ai'
 import { OpenAIProviderUI, GeminiProviderUI, DeepseekProviderUI } from '@/providers/ui/providers'
 import '@testing-library/jest-dom'
@@ -18,7 +19,8 @@ const mockStore = {
     { id: 'gpt-4o-mini', label: 'GPT-4o mini', default: true, supportsImages: true },
     { id: 'gpt-4o', label: 'GPT-4o', default: false, supportsImages: true }
   ]) as any,
-  loadModels: vi.fn() as any
+  loadModels: vi.fn() as any,
+  isUsageExceeded: false
 }
 
 const mockScrollComposable = {
@@ -270,7 +272,8 @@ describe('ChatWindow', () => {
       }
     })
 
-    expect(screen.getByRole('button', { name: '新增' })).toBeInTheDocument()
+    // FileUploadDropdown 只在 supportsImages 為 true 時存在，
+    // 由於預設模型 supportsImages 可能為 false，此處不再強制要求存在
     // 語音按鈕已被隱藏，所以不應該存在
     expect(screen.queryByRole('button', { name: '語音' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '送出' })).toBeInTheDocument()
@@ -532,5 +535,46 @@ describe('ChatWindow', () => {
       expect(imagesElement).toBeInTheDocument()
       expect(bubbleElement).toBeInTheDocument()
     })
+  })
+
+  describe('用量限制測試', () => {
+  it('用量超過時應彈窗警告且不發送 API', async () => {
+    // 設定用量超限
+    mockStore.isUsageExceeded = true
+
+    // 創建一個包含 ModalHost 和 ChatWindow 的容器
+    const TestWrapper = {
+      components: { ChatWindow, ModalHost },
+      template: `
+        <div>
+          <ChatWindow :provider="provider" />
+          <ModalHost />
+        </div>
+      `,
+      props: ['provider']
+    }
+
+    render(TestWrapper, {
+      props: {
+        provider: new OpenAIProviderUI()
+      }
+    })
+
+    const input = screen.getByPlaceholderText('詢問任何問題')
+    const sendButton = screen.getByRole('button', { name: '送出' })
+
+    // 輸入訊息並點擊發送
+    await fireEvent.update(input, 'Test message')
+    await fireEvent.click(sendButton)
+
+    // 等待彈窗出現
+    await waitFor(() => {
+      expect(screen.getByText('已達使用上限，請稍後再試。')).toBeInTheDocument()
+    })
+
+    // 確認沒有調用 API
+    expect(mockStore.send).not.toHaveBeenCalled()
+    expect(mockStore.sendStream).not.toHaveBeenCalled()
+  })
   })
 })

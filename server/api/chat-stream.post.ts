@@ -1,5 +1,9 @@
 import type { ChatStreamRequest, ChatStreamChunk } from '@/types/api/chat-stream'
 import { getProvider } from '../ai/factory'
+import { getOrInitUsage, incrementUsage } from '../utils/usage-store'
+import { getClientIPNormalized } from '../utils/ip'
+import { defaultLimit } from '../config/ai-models'
+import { countMessageTokens, estimateMessagesTokens } from '../utils/token-calculator'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<ChatStreamRequest>(event)
@@ -12,6 +16,17 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    // Rate limit by IP
+    const ip = getClientIPNormalized(event)
+    const record = getOrInitUsage(ip, defaultLimit)
+    // 檢查是否超過限制
+    if (record.used >= record.limit) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Usage limit exceeded'
+      })
+    }
+
     const provider = getProvider(body.provider)
     
     // Set response headers for Server-Sent Events
@@ -24,6 +39,7 @@ export default defineEventHandler(async (event) => {
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder()
+        let actualResponse = ''
         
         try {
           const startTime = Date.now()
@@ -32,6 +48,8 @@ export default defineEventHandler(async (event) => {
             temperature: body.temperature,
             maxTokens: body.maxTokens
           })) {
+            actualResponse += chunk.content || ''
+            
             const streamChunk: ChatStreamChunk = {
               provider: body.provider,
               type: 'content',
@@ -42,13 +60,26 @@ export default defineEventHandler(async (event) => {
             controller.enqueue(encoder.encode(data))
           }
           
-          // Send done chunk
+          // 計算實際使用的完整 token 數（request + response）
+          const requestTokens = estimateMessagesTokens(body.messages, body.model)
+          const responseTokens = countMessageTokens(actualResponse, body.model)
+          const actualTotalTokens = requestTokens + responseTokens
+          
+          incrementUsage(ip, actualTotalTokens)
+          
+          const latest = getOrInitUsage(ip, defaultLimit)
+
           const doneChunk: ChatStreamChunk = {
             provider: body.provider,
             type: 'done',
-            elapsedMs: Date.now() - startTime
+            elapsedMs: Date.now() - startTime,
+            usage: {
+              used: latest.used,
+              limit: latest.limit,
+              remaining: Math.max(0, latest.limit - latest.used)
+            }
           }
-          
+
           const doneData = `data: ${JSON.stringify(doneChunk)}\n\n`
           controller.enqueue(encoder.encode(doneData))
           controller.enqueue(encoder.encode('data: [DONE]\n\n'))

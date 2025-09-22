@@ -5,9 +5,11 @@ import Dropdown from '@/components/common/Dropdown.vue'
 import ChatInput from '@/components/ChatInput.vue'
 import { BaseAIProviderUI } from '@/providers/ui/base'
 import type { ProviderModel } from '@/types/ai'
+import { useModal } from '@/composables/useModal'
 
 const props = defineProps<{ provider: BaseAIProviderUI }>()
 const store = useChatStore()
+const modal = useModal()
 const selectedModel = ref('')
 
 // 模型下拉資料
@@ -38,11 +40,18 @@ const { listEl, scrollToBottom, streamToMessage } = useAutoScroll()
 const messages = computed(() => store.getMessages(props.provider.type))
 const loading = ref(false)
 const isThinking = ref(false)
-const useStreaming = ref(true) // 預設啟用串流
+const useStreaming = ref(true) 
 
 // 核心發送邏輯
 async function sendMessage(text: string, imgUrls: string[] = []) {
   if (!text || loading.value) return
+  
+  // 檢查用量是否超過限制
+  if (store.isUsageExceeded) {
+    modal.alert('已達使用上限，請稍後再試。', '用量超過', 'danger')
+    return false
+  }
+  
   loading.value = true
   isThinking.value = true
   // 用戶發送訊息時立即滾動到底部
@@ -94,6 +103,7 @@ async function sendMessage(text: string, imgUrls: string[] = []) {
     }
   }
   loading.value = false
+  return true // 成功發送時返回 true
 }
 
 

@@ -17,4 +17,5 @@ export interface ChatStreamChunk {
   content?: string
   error?: string
   elapsedMs?: number
+  usage?: { used: number; limit: number; remaining?: number }
 }

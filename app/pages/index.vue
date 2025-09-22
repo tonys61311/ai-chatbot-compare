@@ -3,6 +3,8 @@ import { createAllProviderUIs } from '@/providers/ui/factory'
 import { ref, onMounted, computed } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import ChatInput from '@/components/ChatInput.vue'
+import { apiClient } from '@/utils/api'
+import { useModal } from '@/composables/useModal'
 
 const providers = createAllProviderUIs()
 
@@ -12,6 +14,12 @@ const modelsLoaded = computed(() => store.isModelsLoaded)
 // 統一輸入框
 const chatWindowRefs = ref<Array<{ send: (text: string, imgUrls: string[]) => void } | null>>([])
 
+const usage = computed(() => store.getUsage)
+const exceeded = computed(() => store.isUsageExceeded)
+const usageText = computed(() => `${usage.value.used} / ${usage.value.limit} tokens`)
+
+const modal = useModal()
+
 onMounted(async () => {
   await store.initData()
 })
@@ -19,18 +27,29 @@ onMounted(async () => {
 // 統一發送訊息到所有子元件
 function sendToAll(text: string, imgUrls: string[]) {
   const msg = text.trim()
-  if (!msg) return
+  if (!msg) return false
+  if (exceeded.value) {
+    modal.alert('已達使用上限，請稍後再試。', '用量超過', 'danger')
+    return false
+  }
   chatWindowRefs.value.forEach(chatWindow => {
     if (chatWindow && chatWindow.send) {
       chatWindow.send(msg, imgUrls || [])
     }
   })
+  return true // 成功發送時返回 true
 }
 </script>
 
 <template>
   <div class="container">
-    <h1>AI Chatbot Compare</h1>
+    <div class="header">
+      <h1>AI Chatbot Compare</h1>
+      <div class="usage-container">
+        <span class="usage" :class="{ 'exceeded': exceeded }" aria-live="polite">{{ usageText }}</span>
+        <div v-if="exceeded" role="alert" class="limit-alert">已達使用上限</div>
+      </div>
+    </div>
 
     <div class="grid-3">
       <ChatWindow 
@@ -65,12 +84,44 @@ function sendToAll(text: string, imgUrls: string[]) {
   color: #e6e6e6;
 }
 
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.usage-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.usage {
+  color: #9aa0aa;
+  font-size: 14px;
+  
+  &.exceeded {
+    color: #ff6b6b;
+    font-weight: 600;
+  }
+}
+
+.limit-alert {
+  background: #3a1111;
+  color: #ffb3b3;
+  border: 1px solid #5a1a1a;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 // ===== 標題區域 =====
 h1 {
   color: #e6e6e6;
   font-weight: 600;
   font-size: 24px;
-  margin-bottom: 8px;
+  margin: 0;
 }
 
 p {
