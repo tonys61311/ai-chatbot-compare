@@ -1,7 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  devtools: { enabled: process.env.NODE_ENV === 'development' },
   css: ['@/assets/scss/main.scss'],
   modules: ['@pinia/nuxt'],
   runtimeConfig: {
@@ -17,4 +17,7 @@ export default defineNuxtConfig({
     server: true,
     client: true
   } : false,
+  nitro: {
+    preset: 'cloudflare-pages' // 告訴 Nuxt 打包成 Cloudflare Workers 相容格式
+  }
 })
