@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { countMessageTokens, estimateTokens, estimateMessagesTokens } from './token-calculator'
 
-describe('Token Calculator', () => {
+describe('Token Calculator (GPT Tokenizer)', () => {
   describe('countMessageTokens', () => {
     it('應該正確計算回應的 token 數', () => {
       const response = '這是一個測試回應，包含中文和 English text。'
@@ -63,14 +63,13 @@ describe('Token Calculator', () => {
       expect(typeof tokens).toBe('number')
     })
 
-    it('應該為不同模型提供不同的估算', () => {
+    it('應該為不同模型提供相同的估算', () => {
       const message = { role: 'user', content: 'Test message' }
       
       const gpt4Tokens = estimateTokens(message, 'gpt-4o')
-      const deepseekTokens = estimateTokens(message, 'deepseek-chat')
+      const gpt4MiniTokens = estimateTokens(message, 'gpt-4o-mini')
       
-      expect(gpt4Tokens).toBeGreaterThan(0)
-      expect(deepseekTokens).toBeGreaterThan(0)
+      expect(gpt4Tokens).toBe(gpt4MiniTokens)
     })
   })
 
@@ -120,17 +119,16 @@ describe('Token Calculator', () => {
       expect(tokens).toBe(0)
     })
 
-    it('應該為不同模型提供不同的估算', () => {
+    it('應該為不同模型提供相同的估算', () => {
       const messages = [
         { role: 'user', content: 'Test message' },
         { role: 'assistant', content: 'Test response' }
       ]
       
       const gpt4Tokens = estimateMessagesTokens(messages, 'gpt-4o')
-      const deepseekTokens = estimateMessagesTokens(messages, 'deepseek-chat')
+      const gpt4MiniTokens = estimateMessagesTokens(messages, 'gpt-4o-mini')
       
-      expect(gpt4Tokens).toBeGreaterThan(0)
-      expect(deepseekTokens).toBeGreaterThan(0)
+      expect(gpt4Tokens).toBe(gpt4MiniTokens)
     })
   })
 })
