@@ -10,8 +10,10 @@ export interface StreamChunk {
 
 export abstract class BaseAIProvider {
   public readonly type: AIProviderType
-  protected constructor(type: AIProviderType) {
+  protected readonly apiKey: string
+  protected constructor(type: AIProviderType, apiKey: string) {
     this.type = type
+    this.apiKey = apiKey
   }
 
   abstract chat(request: ModelChat): Promise<string>

@@ -5,40 +5,64 @@ import type { ChatMessageAPI } from '@/types/api/chat-batch'
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
+// ===== 共用工具：訊息轉換與客戶端建立 =====
+function convertMessagesForOpenAI(messages: ChatMessageAPI[]) {
+  return messages.map(msg => {
+    if (typeof msg.content === 'string') {
+      return { role: msg.role, content: msg.content }
+    }
+    return {
+      role: msg.role,
+      content: msg.content.map(item => {
+        if (item.type === 'text') {
+          return { type: 'text', text: item.text }
+        } else if (item.type === 'image_url') {
+          return {
+            type: 'image_url',
+            image_url: { url: item.image_url?.url }
+          }
+        }
+        return item
+      })
+    }
+  })
+}
+
+function convertLastMessageForGemini(lastMessage?: ChatMessageAPI) {
+  if (!lastMessage) throw new Error('No messages provided')
+  if (typeof lastMessage.content === 'string') {
+    return lastMessage.content
+  }
+  const parts: any[] = []
+  for (const item of lastMessage.content) {
+    if (item.type === 'text' && item.text) {
+      parts.push({ text: item.text })
+    } else if (item.type === 'image_url') {
+      const dataUrl = item.image_url?.url || ''
+      const [header, base64Data] = dataUrl.split(',')
+      const mimeType = header.match(/data:([^;]+)/)?.[1] || 'image/jpeg'
+      parts.push({ inlineData: { mimeType, data: base64Data } })
+    }
+  }
+  return parts
+}
+
+function createOpenAIClient(apiKey: string, baseURL?: string) {
+  const config: any = { apiKey }
+  if (baseURL) config.baseURL = baseURL
+  return new OpenAI(config)
+}
+
 export class OpenAIProvider extends BaseAIProvider {
-  private apiKey: string
   constructor(apiKey: string) {
-    super(AIProviderType.OpenAI)
-    this.apiKey = apiKey
+    super(AIProviderType.OpenAI, apiKey)
   }
   async chat(request: ModelChat): Promise<string> {
     if (!this.apiKey) throw new Error('Missing OpenAI API key')
 
     try {
-      const client = new OpenAI({ apiKey: this.apiKey })
-      
-      // 處理多媒體內容
-      const processedMessages = request.messages.map(msg => {
-        if (typeof msg.content === 'string') {
-          return { role: msg.role, content: msg.content }
-        }
-        
-        // 處理多媒體內容
-        return {
-          role: msg.role,
-          content: msg.content.map(item => {
-            if (item.type === 'text') {
-              return { type: 'text', text: item.text }
-            } else if (item.type === 'image_url') {
-              return {
-                type: 'image_url',
-                image_url: { url: item.image_url?.url }
-              }
-            }
-            return item
-          })
-        }
-      })
+      const client = createOpenAIClient(this.apiKey)
+      const processedMessages = convertMessagesForOpenAI(request.messages)
       
       const resp = await client.chat.completions.create({
         model: request.model,
@@ -62,30 +86,8 @@ export class OpenAIProvider extends BaseAIProvider {
     if (!this.apiKey) throw new Error('Missing OpenAI API key')
 
     try {
-      const client = new OpenAI({ apiKey: this.apiKey })
-      
-      // 處理多媒體內容
-      const processedMessages = messages.map(msg => {
-        if (typeof msg.content === 'string') {
-          return { role: msg.role, content: msg.content }
-        }
-        
-        // 處理多媒體內容
-        return {
-          role: msg.role,
-          content: msg.content.map(item => {
-            if (item.type === 'text') {
-              return { type: 'text', text: item.text }
-            } else if (item.type === 'image_url') {
-              return {
-                type: 'image_url',
-                image_url: { url: item.image_url?.url }
-              }
-            }
-            return item
-          })
-        }
-      })
+      const client = createOpenAIClient(this.apiKey)
+      const processedMessages = convertMessagesForOpenAI(messages)
       
       const stream = await client.chat.completions.create({
         model,
@@ -112,10 +114,8 @@ export class OpenAIProvider extends BaseAIProvider {
 }
 
 export class GeminiProvider extends BaseAIProvider {
-  private apiKey: string
   constructor(apiKey: string) {
-    super(AIProviderType.Gemini)
-    this.apiKey = apiKey
+    super(AIProviderType.Gemini, apiKey)
   }
   async chat(request: ModelChat): Promise<string> {
     if (!this.apiKey) throw new Error('Missing Gemini API key')
@@ -125,34 +125,7 @@ export class GeminiProvider extends BaseAIProvider {
       const model = genAI.getGenerativeModel({ model: request.model })
 
       const lastMessage = request.messages[request.messages.length - 1]
-      if (!lastMessage) throw new Error('No messages provided')
-
-      // 處理多媒體內容
-      let content
-      if (typeof lastMessage.content === 'string') {
-        content = lastMessage.content
-      } else {
-        // 轉換為 Gemini 格式
-        const parts = []
-        for (const item of lastMessage.content) {
-          if (item.type === 'text' && item.text) {
-            parts.push({ text: item.text })
-          } else if (item.type === 'image_url') {
-            // 從 data URL 中提取 base64 和 mime type
-            const dataUrl = item.image_url?.url || ''
-            const [header, base64Data] = dataUrl.split(',')
-            const mimeType = header.match(/data:([^;]+)/)?.[1] || 'image/jpeg'
-            
-            parts.push({
-              inlineData: {
-                mimeType,
-                data: base64Data
-              }
-            })
-          }
-        }
-        content = parts
-      }
+      const content = convertLastMessageForGemini(lastMessage)
 
       const result = await model.generateContent(content)
       const response = await result.response
@@ -180,34 +153,7 @@ export class GeminiProvider extends BaseAIProvider {
       })
 
       const lastMessage = messages[messages.length - 1]
-      if (!lastMessage) throw new Error('No messages provided')
-
-      // 處理多媒體內容
-      let content
-      if (typeof lastMessage.content === 'string') {
-        content = lastMessage.content
-      } else {
-        // 轉換為 Gemini 格式
-        const parts = []
-        for (const item of lastMessage.content) {
-          if (item.type === 'text' && item.text) {
-            parts.push({ text: item.text })
-          } else if (item.type === 'image_url') {
-            // 從 data URL 中提取 base64 和 mime type
-            const dataUrl = item.image_url?.url || ''
-            const [header, base64Data] = dataUrl.split(',')
-            const mimeType = header.match(/data:([^;]+)/)?.[1] || 'image/jpeg'
-            
-            parts.push({
-              inlineData: {
-                mimeType,
-                data: base64Data
-              }
-            })
-          }
-        }
-        content = parts
-      }
+      const content = convertLastMessageForGemini(lastMessage)
 
       const result = await genModel.generateContentStream(content)
       
@@ -226,42 +172,15 @@ export class GeminiProvider extends BaseAIProvider {
 }
 
 export class DeepseekProvider extends BaseAIProvider {
-  private apiKey: string
   constructor(apiKey: string) {
-    super(AIProviderType.DeepSeek)
-    this.apiKey = apiKey
+    super(AIProviderType.DeepSeek, apiKey)
   }
   async chat(request: ModelChat): Promise<string> {
     if (!this.apiKey) throw new Error('Missing DeepSeek API key')
 
     try {
-      const client = new OpenAI({ 
-        apiKey: this.apiKey,
-        baseURL: 'https://api.deepseek.com/v1'
-      })
-      
-      // 處理多媒體內容
-      const processedMessages = request.messages.map(msg => {
-        if (typeof msg.content === 'string') {
-          return { role: msg.role, content: msg.content }
-        }
-        
-        // 處理多媒體內容
-        return {
-          role: msg.role,
-          content: msg.content.map(item => {
-            if (item.type === 'text') {
-              return { type: 'text', text: item.text }
-            } else if (item.type === 'image_url') {
-              return {
-                type: 'image_url',
-                image_url: { url: item.image_url?.url }
-              }
-            }
-            return item
-          })
-        }
-      })
+      const client = createOpenAIClient(this.apiKey, 'https://api.deepseek.com/v1')
+      const processedMessages = convertMessagesForOpenAI(request.messages)
       
       const resp = await client.chat.completions.create({
         model: request.model,
@@ -285,33 +204,8 @@ export class DeepseekProvider extends BaseAIProvider {
     if (!this.apiKey) throw new Error('Missing DeepSeek API key')
 
     try {
-      const client = new OpenAI({ 
-        apiKey: this.apiKey,
-        baseURL: 'https://api.deepseek.com/v1'
-      })
-      
-      // 處理多媒體內容
-      const processedMessages = messages.map(msg => {
-        if (typeof msg.content === 'string') {
-          return { role: msg.role, content: msg.content }
-        }
-        
-        // 處理多媒體內容
-        return {
-          role: msg.role,
-          content: msg.content.map(item => {
-            if (item.type === 'text') {
-              return { type: 'text', text: item.text }
-            } else if (item.type === 'image_url') {
-              return {
-                type: 'image_url',
-                image_url: { url: item.image_url?.url }
-              }
-            }
-            return item
-          })
-        }
-      })
+      const client = createOpenAIClient(this.apiKey, 'https://api.deepseek.com/v1')
+      const processedMessages = convertMessagesForOpenAI(messages)
       
       const stream = await client.chat.completions.create({
         model,

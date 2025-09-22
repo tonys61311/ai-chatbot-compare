@@ -24,6 +24,15 @@ vi.mock('@/stores/chat', () => ({
   useChatStore: () => mockStore
 }))
 
+// 穩定測試：將 UsageDisplay 簡化為無動畫版本
+vi.mock('@/components/UsageDisplay.vue', () => ({
+  default: defineComponent({
+    name: 'UsageDisplayMock',
+    props: ['used', 'limit', 'exceeded'],
+    template: '<div class="usage-container"><span class="usage">{{ used }} / {{ limit }} tokens</span><div v-if="exceeded" role="alert">已達使用上限</div></div>'
+  })
+}))
+
 describe('Index page', () => {
   it('should render global input and send button', async () => {
     render(Index)
@@ -89,6 +98,7 @@ describe('Index page', () => {
   })
 
   it('發送後應重新取得用量並更新顯示', async () => {
+    vi.useFakeTimers()
     // 設定初始狀態
     mockUsage.value = { used: 0, limit: 1000 }
     mockExceeded.value = false
@@ -109,9 +119,13 @@ describe('Index page', () => {
     await fireEvent.update(input, 'Hi')
     await fireEvent.click(sendButton)
 
+    // 推進動畫計時
+    vi.advanceTimersByTime(500)
+
     // 應顯示更新後的用量
     await waitFor(() => {
       expect(screen.getByText(/100\s*\/\s*1000 tokens/)).toBeInTheDocument()
     })
+    vi.useRealTimers()
   })
 })

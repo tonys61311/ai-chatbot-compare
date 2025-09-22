@@ -1,10 +1,6 @@
 import { getOrInitUsage } from '../utils/usage-store'
 import { defaultLimit } from '../config/ai-models'
-
-function getClientIPNormalized(event: any): string {
-  // @ts-ignore
-  return (event.node?.req?.socket?.remoteAddress as string) || 'unknown'
-}
+import { getClientIPNormalized } from '../utils/ip'
 
 export default defineEventHandler(async (event) => {
   const ip = getClientIPNormalized(event)

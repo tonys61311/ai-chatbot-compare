@@ -3,8 +3,8 @@ import { createAllProviderUIs } from '@/providers/ui/factory'
 import { ref, onMounted, computed } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import ChatInput from '@/components/ChatInput.vue'
-import { apiClient } from '@/utils/api'
 import { useModal } from '@/composables/useModal'
+import UsageDisplay from '@/components/UsageDisplay.vue'
 
 const providers = createAllProviderUIs()
 
@@ -16,7 +16,6 @@ const chatWindowRefs = ref<Array<{ send: (text: string, imgUrls: string[]) => vo
 
 const usage = computed(() => store.getUsage)
 const exceeded = computed(() => store.isUsageExceeded)
-const usageText = computed(() => `${usage.value.used} / ${usage.value.limit} tokens`)
 
 const modal = useModal()
 
@@ -45,10 +44,7 @@ function sendToAll(text: string, imgUrls: string[]) {
   <div class="container">
     <div class="header">
       <h1>AI Chatbot Compare</h1>
-      <div class="usage-container">
-        <span class="usage" :class="{ 'exceeded': exceeded }" aria-live="polite">{{ usageText }}</span>
-        <div v-if="exceeded" role="alert" class="limit-alert">已達使用上限</div>
-      </div>
+      <UsageDisplay :used="usage.used" :limit="usage.limit" :exceeded="exceeded" />
     </div>
 
     <div class="grid-3">
