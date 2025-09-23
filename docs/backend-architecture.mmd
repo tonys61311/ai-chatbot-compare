@@ -1,0 +1,89 @@
+classDiagram
+direction LR
+
+%% === Domain / DTO ===
+class ChatMessage {
+  +role: string
+  +content: string
+  +images: string[]
+}
+class ChatResult {
+  +provider: string
+  +content: string
+  +error: string
+  +usage: Usage
+}
+class ProviderModels {
+  +provider: string
+  +models: string[]
+}
+class Usage {
+  +used: number
+  +limit: number
+}
+class ProviderModelsResponse {
+  +data: ProviderModels[]
+}
+
+%% === AI Layer ===
+class BaseAIProvider {
+  +streamChat(req): Stream
+  +models(): ProviderModels[]
+}
+class OpenAIProvider
+class GeminiProvider
+class DeepSeekProvider
+BaseAIProvider <|.. OpenAIProvider
+BaseAIProvider <|.. GeminiProvider
+BaseAIProvider <|.. DeepSeekProvider
+
+class ProviderFactory {
+  +create(type): BaseAIProvider
+}
+ProviderFactory ..> BaseAIProvider : returns
+
+class TokenCalculator {
+  +estimate(messages, model): number
+}
+class UsageStore {
+  +get(ip): Usage
+  +update(ip, delta): void
+}
+class IPUtils {
+  +getClientIp(request): string
+}
+class AIModelsConfig {
+  +limitsByProvider
+  +defaultModels
+}
+
+%% === API Endpoints (Controllers) ===
+class ChatStreamEndpoint {
+  +post(): Stream
+  +route: /api/chat-stream
+}
+class ProviderModelsEndpoint {
+  +post(): ProviderModelsResponse
+  +route: /api/provider-models
+}
+class UsageEndpoint {
+  +post(): Usage
+  +route: /api/usage
+}
+
+%% === Relationships ===
+ChatStreamEndpoint ..> ProviderFactory
+ChatStreamEndpoint ..> TokenCalculator
+ChatStreamEndpoint ..> UsageStore
+ChatStreamEndpoint ..> IPUtils
+ChatStreamEndpoint ..> AIModelsConfig
+
+ProviderModelsEndpoint ..> AIModelsConfig
+UsageEndpoint ..> UsageStore
+UsageEndpoint ..> IPUtils
+
+ProviderFactory o-- OpenAIProvider
+ProviderFactory o-- GeminiProvider
+ProviderFactory o-- DeepSeekProvider
+
+
