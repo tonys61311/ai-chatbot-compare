@@ -149,7 +149,7 @@ defineExpose({
         </div>
         
         <!-- 顯示文字內容（在圖片下方） -->
-        <div v-if="Array.isArray(m.content) ? m.content.find(c => c.type === 'text')?.text : m.content" class="bubble">
+        <div class="bubble">
           <CodeMarkdown 
             :content="Array.isArray(m.content) ? m.content.find(c => c.type === 'text')?.text || '' : m.content" 
           />
@@ -398,19 +398,18 @@ defineExpose({
 
 
 .bubble {
-  max-width: 80%;
   padding: 8px 12px;
   border-radius: 12px;
-  background: #1a1d24;
   word-wrap: break-word;
   overflow-wrap: break-word;
 
   .msg.user & {
+    max-width: 80%;
     background: #1e3a5f;
   }
 
   .msg.assistant & {
-    max-width: 100%;
+    width: 100%;
   }
 }
 
