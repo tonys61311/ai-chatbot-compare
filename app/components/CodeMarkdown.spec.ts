@@ -178,6 +178,69 @@ describe('CodeMarkdown', () => {
   })
 
   describe('markdown features', () => {
+    it('should autolink bare URLs in paragraph and table cells', () => {
+      const content = `請參考 https://picsum.photos/600/400 取得圖片\n\n| 名稱 | 連結 |\n| --- | --- |\n| Picsum | https://picsum.photos/200/300 |`
+
+      const { container } = render(CodeMarkdown, {
+        props: { content }
+      })
+
+      const pLink = container.querySelector('a[href="https://picsum.photos/600/400"]')
+      expect(pLink).toBeInTheDocument()
+      expect(pLink).toHaveTextContent('https://picsum.photos/600/400')
+
+      const tLink = container.querySelector('a[href="https://picsum.photos/200/300"]')
+      expect(tLink).toBeInTheDocument()
+      expect(tLink).toHaveTextContent('https://picsum.photos/200/300')
+    })
+
+    it('should autolink URL inside inline code (backticks) but not code blocks', () => {
+      const content = 'URL: `https://placehold.co/600x400`\n\n```\nhttps://placehold.co/700x500\n```'
+
+      const { container } = render(CodeMarkdown, {
+        props: { content }
+      })
+
+      // Inline code should contain clickable link
+      const inlineLink = container.querySelector('code.code-inline a[href="https://placehold.co/600x400"]')
+      expect(inlineLink).toBeInTheDocument()
+
+      // Code block should remain plain text (no links)
+      const blockLink = container.querySelector('pre.code-block a[href="https://placehold.co/700x500"]')
+      expect(blockLink).not.toBeInTheDocument()
+    })
+
+    it('should autolink multiple inline-code URLs in sequence within blockquotes', () => {
+      const content = `> \`https://via.placeholder.com/300x200\`\n\n> \`https://via.placeholder.com/600x400/FF5733/FFFFFF?text=Hello+World\``
+
+      const { container } = render(CodeMarkdown, { props: { content } })
+
+      const a1 = container.querySelector('a[href="https://via.placeholder.com/300x200"]')
+      const a2 = container.querySelector('a[href="https://via.placeholder.com/600x400/FF5733/FFFFFF?text=Hello+World"]')
+
+      expect(a1).toBeInTheDocument()
+      expect(a2).toBeInTheDocument()
+    })
+    it('should render deepseek table content without [object Object]', () => {
+      const content = `這些服務可以讓你透過調整網址中的尺寸參數來獲得任意大小的圖片。
+
+| 服務名稱 | 範例 URL | 說明 |
+| :--- | :--- | :--- |
+| **Picsum.photos** | https://picsum.photos/200/300 | 傳回一張 200x300 像素的隨機圖片。 |
+|  | https://picsum.photos/seed/picsum/600/400 | 傳回一張基於特定種子（seed）的固定圖片，尺寸為 600x400。 |
+| **Placeholder.com** | https://via.placeholder.com/350x150 | 傳回一張 350x150 像素的灰色圖片，上面會有尺寸文字。 |
+|  | https://via.placeholder.com/468x60/FF0000/FFFFFF?text=Ad+Banner | 自訂顏色和文字。格式：寬x高/背景色/文字顏色?text=你的文字 |
+| **Dummyimage.com** | https://dummyimage.com/250x100/0000ff/ffffff.png&text=Hello | 功能與 Placeholder 類似，可自訂顏色和文字。 |`
+
+      const { container } = render(CodeMarkdown, {
+        props: { content }
+      })
+
+      const table = container.querySelector('table')
+      expect(table).toBeInTheDocument()
+      expect(container.textContent).not.toContain('[object Object]')
+      expect(container.textContent).toContain('Picsum.photos')
+    })
     it('should render bold and italic text', () => {
       const { container } = render(CodeMarkdown, {
         props: {

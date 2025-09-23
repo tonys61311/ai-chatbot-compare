@@ -85,16 +85,43 @@ renderer.image = function({ href, title, text }) {
   return `<img src="${href}" alt="${text || ''}" title="${title || ''}" loading="lazy" class="markdown-image" />`
 }
 
-// Table renderer with enhanced styling
-renderer.table = function({ header, rows }) {
-  const bodyRows = rows.map(row => `<tr>${row}</tr>`).join('')
+// Table renderer with enhanced styling and robust handling for token arrays
+const baseRenderer = new marked.Renderer()
+renderer.table = function(node: any) {
+  let tableHtml = ''
+  try {
+    // Use Marked's base renderer to produce correct HTML from any token shape
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    tableHtml = (baseRenderer as any).table(node)
+  } catch {
+    // Fallback: best-effort stringify when node carries arrays/tokens
+    const toHtml = (value: unknown): string => {
+      if (Array.isArray(value)) return value.map(toHtml).join('')
+      if (value && typeof value === 'object') {
+        // Try common token shapes: {text}, {raw}
+        const anyVal = value as Record<string, unknown>
+        return typeof anyVal.raw === 'string'
+          ? anyVal.raw as string
+          : typeof anyVal.text === 'string'
+            ? anyVal.text as string
+            : ''
+      }
+      return String(value ?? '')
+    }
+
+    const header = toHtml(node?.header)
+    const rows: unknown[] = Array.isArray(node?.rows) ? node.rows : []
+    const bodyRows = rows
+      .map(row => `<tr>${toHtml(row)}</tr>`) 
+      .join('')
+
+    tableHtml = `<table><thead>${header}</thead><tbody>${bodyRows}</tbody></table>`
+  }
+
+  // Inject our classes and wrapper while preserving inner HTML
+  tableHtml = tableHtml.replace('<table', '<table class="markdown-table"')
   return `
-    <div class="table-wrapper">
-      <table class="markdown-table">
-        <thead>${header}</thead>
-        <tbody>${bodyRows}</tbody>
-      </table>
-    </div>
+    <div class="table-wrapper">${tableHtml}</div>
   `
 }
 
@@ -107,11 +134,68 @@ const renderedHtml = computed(() => {
   return marked.parse(props.content) as string
 })
 
+// Convert bare URLs in text nodes to clickable links, excluding code/pre/a
+function linkifyHtml(html: string): string {
+  if (!html) return ''
+  const container = document.createElement('div')
+  container.innerHTML = html
+  // NOTE: do not use a shared global regex instance across nodes
+  const urlPattern = /(https?:\/\/[^\s<]+)/g
+  const forbidden = new Set(['A', 'PRE', 'SCRIPT', 'STYLE'])
+
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+  const candidates: Text[] = []
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text
+    if (!node.nodeValue) continue
+    // Skip if within forbidden ancestors
+    let el: HTMLElement | null = node.parentElement
+    let blocked = false
+    while (el) {
+      if (forbidden.has(el.tagName)) { blocked = true; break }
+      // Allow inline code but still block code blocks under <pre>
+      if (el.tagName === 'CODE' && el.classList.contains('code-inline')) {
+        // allowed
+      } else if (el.tagName === 'CODE') {
+        blocked = true; break
+      }
+      el = el.parentElement
+    }
+    if (blocked) continue
+    if (urlPattern.test(node.nodeValue)) candidates.push(node)
+  }
+
+  for (const textNode of candidates) {
+    const value = textNode.nodeValue || ''
+    // create a fresh regex per node to avoid lastIndex bleed
+    const urlRegex = new RegExp(urlPattern.source, 'g')
+    const parts = value.split(urlRegex)
+    const frag = document.createDocumentFragment()
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i]
+      if (!part) continue
+      if (new RegExp(urlPattern.source).test(part)) {
+        const a = document.createElement('a')
+        a.href = part
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        a.textContent = part
+        frag.appendChild(a)
+      } else {
+        frag.appendChild(document.createTextNode(part))
+      }
+    }
+    textNode.replaceWith(frag)
+  }
+
+  return container.innerHTML
+}
+
 // Sanitize HTML using DOMPurify
 const sanitizedHtml = computed(() => {
   if (!renderedHtml.value) return ''
-  
-  return DOMPurify.sanitize(renderedHtml.value, {
+  const linkified = linkifyHtml(renderedHtml.value)
+  return DOMPurify.sanitize(linkified, {
     USE_PROFILES: { html: true, svg: true },
     ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'strong', 'em', 'del', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'div', 'span', 'button', 'svg', 'path'],
     ADD_ATTR: ['target', 'rel', 'type', 'width', 'height', 'viewBox', 'fill', 'd'],
