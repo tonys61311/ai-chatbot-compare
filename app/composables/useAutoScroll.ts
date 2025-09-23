@@ -1,5 +1,6 @@
 import { ref, nextTick } from 'vue'
 import type { ChatMessage } from '@/types/api/chat-batch'
+import { htmlAwareTokenize, sleep } from '@/utils/helpers'
 
 export function useAutoScroll() {
   const listEl = ref<HTMLElement | null>(null)
@@ -35,6 +36,10 @@ export function useAutoScroll() {
     mode: 'auto' | 'word' | 'char' = 'auto'
   ) {
     const tokens = htmlAwareTokenize(html, mode)
+    // 確保 content 是字符串
+    if (typeof targetMessage.content !== 'string') {
+      targetMessage.content = ''
+    }
     for (let i = 0; i < tokens.length; i++) {
       targetMessage.content += tokens[i]
       if (i % 3 === 0) {
